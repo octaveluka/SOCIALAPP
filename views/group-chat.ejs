@@ -185,6 +185,19 @@
       <button type="button" id="microBtn" class="chat-icon-btn"><i class="fa-solid fa-microphone"></i></button>
       <button type="button" id="sendBtn" class="chat-send-btn" style="display:none;"><i class="fa-solid fa-paper-plane"></i></button>
     </form>
+    <!-- BARRE ENREGISTREMENT WHATSAPP -->
+    <div id="recordingBar" class="wa-recording-bar" style="display:none;">
+      <button type="button" id="cancelRecordBtn" class="wa-rec-cancel"><i class="fa-solid fa-trash"></i></button>
+      <div class="wa-rec-center">
+        <span class="wa-rec-dot"></span>
+        <span id="waTimer" class="wa-rec-timer">0:00</span>
+        <div class="wa-rec-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <button type="button" id="sendRecordBtn" class="wa-rec-send"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
     <div class="mention-list" id="mentionList" style="display:none;"></div>
   </div>
 
@@ -287,26 +300,48 @@ document.getElementById("photoInput").addEventListener("change", async function(
 });
 
 // =============================================
-// AUDIO
+// AUDIO (WhatsApp style)
 // =============================================
+const recordingBar = document.getElementById("recordingBar");
+const waTimerEl = document.getElementById("waTimer");
+let pendingAudioBlob = null, pendingAudioDuration = 0, waStream = null;
+
+function showRecordingBar() {
+  document.getElementById("chatForm").style.display = "none";
+  recordingBar.style.display = "flex";
+  waTimerEl.textContent = "0:00";
+}
+function hideRecordingBar() {
+  recordingBar.style.display = "none";
+  document.getElementById("chatForm").style.display = "flex";
+}
+
 microBtn.addEventListener("click", async function() {
-  if (isRecording) {
-    mediaRecorder.stop(); this.style.color="var(--text-secondary)"; this.innerHTML='<i class="fa-solid fa-microphone"></i>';
-    clearInterval(recordingTimer); document.querySelector(".recording-indicator")?.remove(); isRecording=false; return;
-  }
+  if (isRecording) { mediaRecorder.stop(); return; }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    mediaRecorder = new MediaRecorder(stream,{mimeType:"audio/webm"}); audioChunks=[]; recordingSeconds=0;
-    const ind = document.createElement("div"); ind.className="recording-indicator";
-    ind.style.cssText="display:flex;align-items:center;gap:8px;padding:0 12px;font-size:14px;";
-    ind.innerHTML=`<span id="recordingTimer" style="font-weight:600;color:var(--primary);">0:00</span><button id="cancelRecording" style="background:none;border:none;color:var(--error);font-size:16px;cursor:pointer;"><i class="fa-solid fa-xmark-circle"></i> Annuler</button>`;
-    messageInput.parentNode.insertBefore(ind, messageInput.nextSibling);
-    recordingTimer = setInterval(()=>{recordingSeconds++;const m=Math.floor(recordingSeconds/60),s=String(recordingSeconds%60).padStart(2,'0');const el=document.getElementById("recordingTimer");if(el)el.textContent=m+":"+s;},1000);
-    document.getElementById("cancelRecording").addEventListener("click",()=>{mediaRecorder.stop();clearInterval(recordingTimer);ind.remove();microBtn.style.color="var(--text-secondary)";microBtn.innerHTML='<i class="fa-solid fa-microphone"></i>';isRecording=false;});
+    waStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder = new MediaRecorder(waStream,{mimeType:"audio/webm"}); audioChunks=[]; recordingSeconds=0;
+    showRecordingBar();
+    recordingTimer = setInterval(()=>{recordingSeconds++;const m=Math.floor(recordingSeconds/60),s=String(recordingSeconds%60).padStart(2,'0');waTimerEl.textContent=m+":"+s;},1000);
     mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-    mediaRecorder.onstop=()=>{clearInterval(recordingTimer);ind.remove();const blob=new Blob(audioChunks,{type:"audio/webm"});sendGroupAudio(blob,recordingSeconds);audioChunks=[];microBtn.style.color="var(--text-secondary)";microBtn.innerHTML='<i class="fa-solid fa-microphone"></i>';isRecording=false;};
-    mediaRecorder.start();isRecording=true;microBtn.style.color="#ef4444";microBtn.innerHTML='<i class="fa-solid fa-circle"></i>';
+    mediaRecorder.onstop=()=>{clearInterval(recordingTimer);waStream?.getTracks().forEach(t=>t.stop());const blob=new Blob(audioChunks,{type:"audio/webm"});pendingAudioBlob=blob;pendingAudioDuration=recordingSeconds;isRecording=false;};
+    mediaRecorder.start(); isRecording=true;
   } catch(e){alert("Impossible d'accéder au microphone.");}
+});
+
+document.getElementById("cancelRecordBtn").addEventListener("click",()=>{
+  if(mediaRecorder&&isRecording){isRecording=false;mediaRecorder.stop();}
+  clearInterval(recordingTimer); waStream?.getTracks().forEach(t=>t.stop());
+  pendingAudioBlob=null; pendingAudioDuration=0; hideRecordingBar();
+});
+
+document.getElementById("sendRecordBtn").addEventListener("click",()=>{
+  if(mediaRecorder&&isRecording){
+    mediaRecorder.onstop=()=>{clearInterval(recordingTimer);waStream?.getTracks().forEach(t=>t.stop());const blob=new Blob(audioChunks,{type:"audio/webm"});sendGroupAudio(blob,recordingSeconds);audioChunks=[];isRecording=false;pendingAudioBlob=null;hideRecordingBar();};
+    mediaRecorder.stop();
+  } else if(pendingAudioBlob){
+    sendGroupAudio(pendingAudioBlob,pendingAudioDuration);pendingAudioBlob=null;pendingAudioDuration=0;hideRecordingBar();
+  }
 });
 async function sendGroupAudio(blob,duration){
   const fd=new FormData();fd.append("audio",blob,"audio.webm");fd.append("groupId",groupId);fd.append("duration",duration);

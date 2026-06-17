@@ -38,7 +38,9 @@ description: Key decisions and constraints for SocialApp Node.js/Express/MongoDB
 ## System Groups
 - "Avis & Solutions" (systemGroupKey: "avis_solutions") and "Primes" (systemGroupKey: "primes")
 - Created on startup via ensureSystemGroups() in routes/auth.js
-- New users added automatically on register + receive 100 welcome credits + 10 XP
+- New users added to system groups on register AND on each login (sync)
+- First non-bot human to register gets role "admin" (count excludes isBot:true users)
+- New users receive 100 welcome credits + 10 XP on register
 
 ## Themes (CSS data-theme on body)
 - default, dark, neon, ocean, sunset, forest

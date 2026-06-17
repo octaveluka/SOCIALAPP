@@ -88,6 +88,11 @@ router.post("/login", redirectIfAuth, async (req, res) => {
         }
         user.enLigne = true
         await user.save()
+        // S'assurer que l'utilisateur est dans les groupes système
+        try {
+            await ensureSystemGroups()
+            await addUserToSystemGroups(user._id)
+        } catch(e) {}
         res.redirect("/")
     } catch (err) {
         console.error(err)
@@ -126,8 +131,8 @@ router.post("/register", redirectIfAuth, async (req, res) => {
             req.flash("error", "Un compte existe déjà avec cet email.")
             return res.redirect("/register")
         }
-        const usersCount = await User.countDocuments()
-        const role = usersCount === 0 ? "admin" : "user"
+        const humanCount = await User.countDocuments({ isBot: { $ne: true } })
+        const role = humanCount === 0 ? "admin" : "user"
         const newUser = new User({ nom: nom.trim(), email: email.toLowerCase(), motDePasse, role })
         await newUser.save()
 
