@@ -77,8 +77,23 @@
       <button id="createSubProfileBtn" class="btn-primary-action" style="margin:12px;width:calc(100% - 24px);">+ Créer un profil anonyme</button>
     </div>
 
+    <% if (group.systemGroupKey === 'primes') { %>
+    <!-- PRIMES TASKS PANEL -->
+    <div class="primes-panel" id="primesPanel">
+      <div class="primes-header">
+        <h3>🏆 Tâches Journalières</h3>
+        <p>Accomplis des missions pour gagner des crédits • Se renouvèle chaque jour à minuit</p>
+      </div>
+      <div id="tasksContainer">
+        <div style="text-align:center;padding:20px;color:var(--text-secondary);">
+          <i class="fa-solid fa-spinner fa-spin"></i> Chargement des tâches…
+        </div>
+      </div>
+    </div>
+    <% } %>
+
     <!-- MESSAGES -->
-    <div class="chat-messages" id="chatMessages">
+    <div class="chat-messages" id="chatMessages" <% if (group.systemGroupKey === 'primes') { %>style="display:none"<% } %>>
       <% messages.forEach(msg => {
         const expediteurId = msg.expediteur ? msg.expediteur._id.toString() : ''
         const isOwn = expediteurId === currentUserId
@@ -86,7 +101,7 @@
         const isDeleted = msg.isDeleted
         const isBurn = msg.expiresAt
       %>
-        <div class="message-group-wrapper" data-id="<%= msg._id %>">
+        <div class="message-group-wrapper <%= isOwn ? 'sent-wrapper' : 'received-wrapper' %>" data-id="<%= msg._id %>">
           <% if (!isOwn && msg.expediteur) { %>
             <div class="message-author">
               <% if (msg.anonymousAvatar) { %><img src="<%= msg.anonymousAvatar %>" style="width:18px;height:18px;border-radius:50%;margin-right:4px;" alt=""><% } %>
@@ -164,6 +179,7 @@
       <% }) %>
     </div>
 
+    <% if (group.systemGroupKey !== 'primes') { %>
     <!-- REPLY PREVIEW -->
     <div class="reply-preview" id="replyPreview" style="display:none;">
       <div class="reply-preview-content"><i class="fa-solid fa-reply"></i><span id="replyPreviewText"></span></div>
@@ -199,6 +215,7 @@
       <button type="button" id="sendRecordBtn" class="wa-rec-send"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
     <div class="mention-list" id="mentionList" style="display:none;"></div>
+    <% } %>
   </div>
 
 </div>
@@ -238,8 +255,9 @@ document.querySelectorAll(".burn-timer").forEach(el => {
 });
 
 // =============================================
-// INPUT HANDLING
+// INPUT HANDLING (skipped for read-only groups like Primes)
 // =============================================
+if (messageInput) {
 messageInput.addEventListener("input", function() {
   const val = this.value;
   const hasText = val.trim().length > 0;
@@ -360,6 +378,7 @@ document.getElementById("codeBtn").addEventListener("click", () => {
   messageInput.dataset.isCode = "true";
   messageInput.focus();
 });
+} // end if(messageInput)
 
 // =============================================
 // CHAOS MODE
@@ -610,7 +629,7 @@ function cancelReplyAction(){replyingTo=null;replyPreview.style.display="none";}
 function appendGroupMessage(data,isTemp=false){
   const isOwn=(data.expediteur===currentUserId)||(data.expediteur&&data.expediteur._id===currentUserId);
   const wrapper=document.createElement("div");
-  wrapper.className="message-group-wrapper";wrapper.dataset.id=data._id;
+  wrapper.className=`message-group-wrapper ${isOwn?"sent-wrapper":"received-wrapper"}`;wrapper.dataset.id=data._id;
   if(isTemp) wrapper.dataset.temp="true";
   let html="";
 
@@ -698,11 +717,75 @@ function esc(s){return escapeHtml(s);}
 function formatMentions(str){return str.replace(/@(\w+)/g,'<span class="mention">@$1</span>');}
 document.addEventListener("click",e=>{
   if(!e.target.closest(".emoji-picker")&&!e.target.closest(".react-btn")){document.querySelectorAll(".emoji-picker.active").forEach(p=>p.classList.remove("active"));}
-  if(!e.target.closest("#mentionList")&&!e.target.closest("#messageInput")){mentionList.style.display="none";}
+  if(!e.target.closest("#mentionList")&&!e.target.closest("#messageInput")){const ml=document.getElementById("mentionList");if(ml)ml.style.display="none";}
   if(!e.target.closest("#subProfilePanel")&&!e.target.closest("#subProfileBtn")){document.getElementById("subProfilePanel").style.display="none";}
   if(!e.target.closest("#watchPartyPanel")&&!e.target.closest("#watchPartyBtn")){/* keep open */}
   if(!e.target.closest("#voiceRoomPanel")&&!e.target.closest("#voiceRoomBtn")){/* keep open */}
 });
+
+<% if (group.systemGroupKey === 'primes') { %>
+(async function loadPrimesTasks(){
+  const container=document.getElementById("tasksContainer");
+  if(!container)return;
+  try{
+    const res=await fetch("/api/daily-tasks");
+    const data=await res.json();
+    if(!data.success||!data.tasks.length){container.innerHTML='<p style="text-align:center;color:var(--text-secondary)">Aucune tâche disponible pour aujourd\'hui.</p>';return;}
+    container.innerHTML="";
+    data.tasks.forEach(t=>{
+      const card=document.createElement("div");
+      card.className="task-card"+(t.done?" task-done":"");
+      card.dataset.id=t._id;
+      card.dataset.verified="false";
+      card.innerHTML=`
+        <div class="task-info">
+          <div class="task-title">${t.title}</div>
+          <div class="task-desc">${t.description}</div>
+        </div>
+        <span class="task-reward">+${t.reward} crédits</span>
+        <div class="task-actions">
+          ${t.done
+            ? '<span class="task-status-done">✅</span>'
+            : `<button class="btn-verify" onclick="verifyTask('${t._id}',this)">Vérifier</button>
+               <button class="btn-claim" onclick="claimTask('${t._id}',this)">Valider</button>`
+          }
+        </div>`;
+      container.appendChild(card);
+    });
+  }catch(e){container.innerHTML='<p style="color:red;text-align:center;">Erreur de chargement</p>';}
+})();
+
+async function verifyTask(id,btn){
+  btn.disabled=true;btn.textContent="Vérification…";
+  try{
+    const res=await fetch(`/api/daily-tasks/${id}/verify`,{method:"POST",headers:{"Content-Type":"application/json"}});
+    const data=await res.json();
+    if(data.already){btn.disabled=true;btn.textContent="Déjà réclamé";return;}
+    if(data.verified){
+      btn.textContent="✅ Validé";btn.disabled=true;
+      const card=btn.closest(".task-card");
+      const claimBtn=card.querySelector(".btn-claim");
+      if(claimBtn)claimBtn.style.display="inline-flex";
+    }else{
+      btn.disabled=false;btn.textContent="Vérifier";
+      alert("❌ Tâche non accomplie. Complète-la d'abord !");
+    }
+  }catch(e){btn.disabled=false;btn.textContent="Vérifier";}
+}
+
+async function claimTask(id,btn){
+  btn.disabled=true;btn.textContent="…";
+  try{
+    const res=await fetch(`/api/daily-tasks/${id}/claim`,{method:"POST",headers:{"Content-Type":"application/json"}});
+    const data=await res.json();
+    if(data.success){
+      const card=btn.closest(".task-card");
+      card.classList.add("task-done");
+      card.querySelector(".task-actions").innerHTML='<span class="task-status-done">✅</span>';
+    }else{btn.disabled=false;btn.textContent="Valider";}
+  }catch(e){btn.disabled=false;btn.textContent="Valider";}
+}
+<% } %>
 </script>
 </body>
 </html>

@@ -94,6 +94,31 @@
                 </div>
             </div>
 
+            <% if (isOwnProfile) { %>
+            <div class="card" style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        <span style="font-size:20px;">💰</span>
+                        <span style="font-size:17px; font-weight:700; color:#f59e0b;"><%= profileUser.walletBalance || 0 %></span>
+                        <span style="font-size:11px; color:var(--text-secondary);">Crédits</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        <span style="font-size:20px;">⭐</span>
+                        <span style="font-size:17px; font-weight:700; color:#8b5cf6;"><%= profileUser.xp || 0 %></span>
+                        <span style="font-size:11px; color:var(--text-secondary);">XP</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <a href="/wallet" class="btn btn-secondary" style="width:auto; padding:8px 18px; font-size:13px;">
+                        <i class="fa-solid fa-wallet"></i> Portefeuille
+                    </a>
+                    <a href="/shop" class="btn" style="width:auto; padding:8px 18px; font-size:13px;">
+                        <i class="fa-solid fa-store"></i> Boutique
+                    </a>
+                </div>
+            </div>
+            <% } %>
+
             <!-- Publications -->
             <% if (posts.length === 0) { %>
                 <div class="card empty-state">

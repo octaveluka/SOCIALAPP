@@ -44,6 +44,10 @@ mongoose.connect(process.env.MONGO_URI)
         } catch(e) { console.log("Admin email setup:", e.message) }
         // Cron : nettoyer les messages éphémères
         startEphemeralCleanup()
+        // Tâches journalières : générer dès le démarrage + toutes les heures (auto-reset à minuit)
+        const { generateDailyTasks } = require("./routes/dailytasks")
+        generateDailyTasks().catch(e => console.error("Daily tasks init:", e.message))
+        setInterval(() => generateDailyTasks().catch(e => console.error("Daily tasks cron:", e.message)), 3600000)
     })
     .catch(err => console.log("❌ Erreur MongoDB :", err.message))
 
@@ -151,6 +155,7 @@ app.use("/", require("./routes/ai"))
 app.use("/", require("./routes/gamification"))
 app.use("/", require("./routes/security"))
 app.use("/", require("./routes/voicerooms"))
+app.use("/", require("./routes/dailytasks"))
 
 // =============================================
 // SOCKET.IO
