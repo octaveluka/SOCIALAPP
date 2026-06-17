@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body>
+    <%- include('partials/navbar', { currentPage: 'admin' }) %>
+
+    <div class="main-container">
+        <%- include('partials/sidebar', { currentPage: 'admin' }) %>
+
+        <main class="feed">
+
+            <div class="page-header">
+                <div>
+                    <h1>Utilisateurs</h1>
+                    <div class="subtitle"><%= users.length %> utilisateur<%= users.length > 1 ? 's' : '' %> trouvé<%= users.length > 1 ? 's' : '' %></div>
+                </div>
+                <a href="/admin" class="btn btn-secondary" style="width:auto; padding:10px 20px;">
+                    <i class="fa-solid fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+
+            <div id="toast" class="alert alert-success" style="display:none;">
+                <i class="fa-solid fa-circle-check"></i>
+                <span id="toastText"></span>
+            </div>
+            <div id="errorToast" class="alert alert-error" style="display:none;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span id="errorToastText"></span>
+            </div>
+
+            <!-- Recherche -->
+            <div class="card">
+                <form action="/admin/users" method="GET">
+                    <div class="search-bar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" name="q" value="<%= query %>" placeholder="Rechercher par nom ou email...">
+                    </div>
+                </form>
+            </div>
+
+            <!-- Liste des utilisateurs -->
+            <% users.forEach(u => { %>
+                <div class="card" data-user-id="<%= u._id %>" style="padding:16px 20px;">
+                    <div style="display:flex; align-items:flex-start; gap:14px;">
+
+                        <!-- Avatar -->
+                        <img src="<%= u.photoProfil %>" alt=""
+                             style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid var(--border); flex-shrink:0;">
+
+                        <!-- Infos -->
+                        <div style="flex:1; min-width:0;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <a href="/profile/<%= u._id %>" style="font-weight:700; font-size:15px; color:var(--text-primary);">
+                                    <%= u.nom %>
+                                </a>
+                                <!-- Badges -->
+                                <%- include('partials/badges', { badges: u.badges }) %>
+
+                                <!-- Tags rôle/statut -->
+                                <span class="tag role-tag-<%= u._id %> <%= u.role === 'admin' ? 'tag-admin' : 'tag-user' %>">
+                                    <%= u.role === 'admin' ? 'Admin' : 'Utilisateur' %>
+                                </span>
+                                <span class="tag status-tag-<%= u._id %> <%= u.isDisabled ? 'tag-disabled' : 'tag-active' %>">
+                                    <%= u.isDisabled ? 'Désactivé' : 'Actif' %>
+                                </span>
+                            </div>
+                            <div style="font-size:13px; color:var(--text-secondary); margin-top:3px;">
+                                <%= u.email %>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                Membre depuis <%= new Date(u.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                            </div>
+
+                            <!-- Badges existants -->
+                            <div class="badge-admin-list badges-list-<%= u._id %>">
+                                <% u.badges.forEach(b => { 
+                                    const labels = { verifie: 'Vérifié', moderateur: 'Modérateur', fondateur: 'Fondateur', premium: 'Premium', staff: 'Staff' }
+                                    const icons = { verifie: 'fa-check', moderateur: 'fa-shield', fondateur: 'fa-star', premium: 'fa-crown', staff: 'fa-screwdriver-wrench' }
+                                %>
+                                    <span class="badge-admin-item badge-<%= b.type %>">
+                                        <span class="user-badge badge-<%= b.type %>">
+                                            <i class="fa-solid <%= icons[b.type] %>"></i>
+                                        </span>
+                                        <%= labels[b.type] %>
+                                        <% if (u._id.toString() !== currentUserId) { %>
+                                            <i class="fa-solid fa-xmark badge-remove" data-type="<%= b.type %>"></i>
+                                        <% } %>
+                                    </span>
+                                <% }) %>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <% if (u._id.toString() !== currentUserId) { %>
+                            <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
+                                <button class="btn btn-secondary toggle-role-btn" style="width:auto; padding:7px 14px; font-size:12px;">
+                                    <%= u.role === 'admin' ? 'Retirer admin' : 'Rendre admin' %>
+                                </button>
+                                <button class="btn btn-secondary toggle-disable-btn" style="width:auto; padding:7px 14px; font-size:12px;">
+                                    <%= u.isDisabled ? 'Réactiver' : 'Désactiver' %>
+                                </button>
+                                <button class="btn btn-danger delete-user-btn" style="width:auto; padding:7px 14px; font-size:12px;">
+                                    <i class="fa-solid fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        <% } else { %>
+                            <span style="font-size:12px; color:var(--text-muted); padding:8px;">C'est toi</span>
+                        <% } %>
+                    </div>
+
+                    <!-- Ajouter un badge -->
+                    <% if (u._id.toString() !== currentUserId) { %>
+                        <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+                            <div style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:8px;">
+                                <i class="fa-solid fa-plus"></i> Ajouter un badge
+                            </div>
+                            <div class="add-badge-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button class="add-badge-btn btn btn-secondary" data-type="verifie" style="width:auto; padding:6px 12px; font-size:12px;">
+                                    <span class="user-badge badge-verifie" style="margin-left:0; margin-right:4px;"><i class="fa-solid fa-check"></i></span>
+                                    Vérifié
+                                </button>
+                                <button class="add-badge-btn btn btn-secondary" data-type="moderateur" style="width:auto; padding:6px 12px; font-size:12px;">
+                                    <span class="user-badge badge-moderateur" style="margin-left:0; margin-right:4px;"><i class="fa-solid fa-shield"></i></span>
+                                    Modérateur
+                                </button>
+                                <button class="add-badge-btn btn btn-secondary" data-type="fondateur" style="width:auto; padding:6px 12px; font-size:12px;">
+                                    <span class="user-badge badge-fondateur" style="margin-left:0; margin-right:4px;"><i class="fa-solid fa-star"></i></span>
+                                    Fondateur
+                                </button>
+                                <button class="add-badge-btn btn btn-secondary" data-type="premium" style="width:auto; padding:6px 12px; font-size:12px;">
+                                    <span class="user-badge badge-premium" style="margin-left:0; margin-right:4px;"><i class="fa-solid fa-crown"></i></span>
+                                    Premium
+                                </button>
+                                <button class="add-badge-btn btn btn-secondary" data-type="staff" style="width:auto; padding:6px 12px; font-size:12px;">
+                                    <span class="user-badge badge-staff" style="margin-left:0; margin-right:4px;"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+                                    Staff
+                                </button>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            <% }) %>
+
+        </main>
+    </div>
+
+    <script>
+        function showToast(message, isError = false) {
+            const toast = isError ? document.getElementById("errorToast") : document.getElementById("toast")
+            const text = isError ? document.getElementById("errorToastText") : document.getElementById("toastText")
+            text.innerText = message
+            toast.style.display = "flex"
+            setTimeout(() => { toast.style.display = "none" }, 3000)
+        }
+
+        const badgeLabels = { verifie: 'Vérifié', moderateur: 'Modérateur', fondateur: 'Fondateur', premium: 'Premium', staff: 'Staff' }
+        const badgeIcons = { verifie: 'fa-check', moderateur: 'fa-shield', fondateur: 'fa-star', premium: 'fa-crown', staff: 'fa-screwdriver-wrench' }
+
+        // Toggle rôle
+        document.querySelectorAll(".toggle-role-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const card = btn.closest("[data-user-id]")
+                const userId = card.getAttribute("data-user-id")
+
+                try {
+                    const res = await fetch(`/admin/users/${userId}/toggle-role`, { method: "POST" })
+                    const data = await res.json()
+
+                    if (data.success) {
+                        const tag = card.querySelector(`.role-tag-${userId}`)
+                        if (data.role === "admin") {
+                            tag.textContent = "Admin"
+                            tag.className = `tag role-tag-${userId} tag-admin`
+                            btn.textContent = "Retirer admin"
+                        } else {
+                            tag.textContent = "Utilisateur"
+                            tag.className = `tag role-tag-${userId} tag-user`
+                            btn.textContent = "Rendre admin"
+                        }
+                        showToast("Rôle mis à jour !")
+                    } else {
+                        showToast(data.error || "Erreur", true)
+                    }
+                } catch (e) {
+                    showToast("Erreur de connexion", true)
+                }
+            })
+        })
+
+        // Toggle désactivation
+        document.querySelectorAll(".toggle-disable-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const card = btn.closest("[data-user-id]")
+                const userId = card.getAttribute("data-user-id")
+
+                try {
+                    const res = await fetch(`/admin/users/${userId}/toggle-disable`, { method: "POST" })
+                    const data = await res.json()
+
+                    if (data.success) {
+                        const tag = card.querySelector(`.status-tag-${userId}`)
+                        if (data.isDisabled) {
+                            tag.textContent = "Désactivé"
+                            tag.className = `tag status-tag-${userId} tag-disabled`
+                            btn.textContent = "Réactiver"
+                        } else {
+                            tag.textContent = "Actif"
+                            tag.className = `tag status-tag-${userId} tag-active`
+                            btn.textContent = "Désactiver"
+                        }
+                        showToast("Statut mis à jour !")
+                    } else {
+                        showToast(data.error || "Erreur", true)
+                    }
+                } catch (e) {
+                    showToast("Erreur de connexion", true)
+                }
+            })
+        })
+
+        // Suppression
+        document.querySelectorAll(".delete-user-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                if (!confirm("Supprimer définitivement ce compte ? Cette action est irréversible.")) return
+
+                const card = btn.closest("[data-user-id]")
+                const userId = card.getAttribute("data-user-id")
+
+                try {
+                    const res = await fetch(`/admin/users/${userId}/delete`, { method: "POST" })
+                    const data = await res.json()
+
+                    if (data.success) {
+                        card.style.opacity = "0"
+                        card.style.transform = "scale(0.95)"
+                        card.style.transition = "all 0.3s ease"
+                        setTimeout(() => card.remove(), 300)
+                        showToast("Compte supprimé.")
+                    } else {
+                        showToast(data.error || "Erreur", true)
+                    }
+                } catch (e) {
+                    showToast("Erreur de connexion", true)
+                }
+            })
+        })
+
+        // Ajouter un badge
+        document.querySelectorAll(".add-badge-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const card = btn.closest("[data-user-id]")
+                const userId = card.getAttribute("data-user-id")
+                const type = btn.getAttribute("data-type")
+
+                try {
+                    const res = await fetch(`/admin/users/${userId}/badges/add`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type })
+                    })
+                    const data = await res.json()
+
+                    if (data.success) {
+                        const list = card.querySelector(`.badges-list-${userId}`)
+                        const span = document.createElement("span")
+                        span.className = `badge-admin-item badge-${type}`
+                        span.innerHTML = `
+                            <span class="user-badge badge-${type}" style="margin-left:0; margin-right:0;">
+                                <i class="fa-solid ${badgeIcons[type]}"></i>
+                            </span>
+                            ${badgeLabels[type]}
+                            <i class="fa-solid fa-xmark badge-remove" data-type="${type}"></i>
+                        `
+                        list.appendChild(span)
+                        showToast(`Badge "${badgeLabels[type]}" ajouté !`)
+                    } else {
+                        showToast(data.error || "Erreur", true)
+                    }
+                } catch (e) {
+                    showToast("Erreur de connexion", true)
+                }
+            })
+        })
+
+        // Retirer un badge
+        document.addEventListener("click", async (e) => {
+            const removeBtn = e.target.closest(".badge-remove")
+            if (!removeBtn) return
+
+            const card = removeBtn.closest("[data-user-id]")
+            const userId = card.getAttribute("data-user-id")
+            const type = removeBtn.getAttribute("data-type")
+
+            try {
+                const res = await fetch(`/admin/users/${userId}/badges/remove/${type}`, { method: "POST" })
+                const data = await res.json()
+
+                if (data.success) {
+                    removeBtn.closest(".badge-admin-item").remove()
+                    showToast("Badge retiré.")
+                } else {
+                    showToast(data.error || "Erreur", true)
+                }
+            } catch (e) {
+                showToast("Erreur de connexion", true)
+            }
+        })
+    </script>
+</body>
+</html>

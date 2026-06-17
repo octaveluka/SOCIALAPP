@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body>
+    <%- include('partials/navbar', { currentPage: 'profile' }) %>
+
+    <div class="main-container">
+        <%- include('partials/sidebar', { currentPage: 'profile' }) %>
+
+        <main class="feed">
+
+            <div class="page-header">
+                <div>
+                    <h1>Modifier le profil</h1>
+                    <div class="subtitle">Mets à jour tes informations</div>
+                </div>
+                <a href="/profile/<%= profileUser._id %>" class="btn btn-secondary" style="width:auto; padding:10px 20px;">
+                    <i class="fa-solid fa-arrow-left"></i> Retour
+                </a>
+            </div>
+
+            <% if (error && error.length > 0) { %>
+                <div class="alert alert-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><%= error[0] %></span>
+                </div>
+            <% } %>
+
+            <div class="card">
+                <form action="/profile/edit" method="POST" enctype="multipart/form-data">
+
+                    <!-- Photo de profil -->
+                    <div style="text-align:center; margin-bottom:28px;">
+                        <div style="position:relative; display:inline-block;">
+                            <img src="<%= profileUser.photoProfil %>" class="profile-avatar" alt="" id="avatarPreview"
+                                 style="width:100px; height:100px; margin-top:0; margin-bottom:0;">
+                            <label for="photoInput" style="
+                                position:absolute;
+                                bottom:0;
+                                right:0;
+                                width:34px;
+                                height:34px;
+                                background:var(--primary);
+                                color:#fff;
+                                border-radius:50%;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                cursor:pointer;
+                                font-size:14px;
+                                box-shadow:var(--shadow-md);
+                                border:3px solid var(--card-bg);
+                            ">
+                                <i class="fa-solid fa-camera"></i>
+                            </label>
+                            <input type="file" id="photoInput" name="photoProfil" accept="image/*" style="display:none">
+                        </div>
+                        <div style="font-size:13px; color:var(--text-secondary); margin-top:10px;">
+                            Clique sur l'icône pour changer ta photo
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nom complet</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" name="nom" value="<%= profileUser.nom %>" required maxlength="30">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bio <span style="font-weight:400; color:var(--text-muted);">(optionnel)</span></label>
+                        <textarea name="bio" rows="3" maxlength="200"
+                                  placeholder="Parle un peu de toi..."><%= profileUser.bio %></textarea>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fa-solid fa-check"></i> Enregistrer les modifications
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0]
+            if (file) {
+                document.getElementById('avatarPreview').src = URL.createObjectURL(file)
+            }
+        })
+    </script>
+</body>
+</html>

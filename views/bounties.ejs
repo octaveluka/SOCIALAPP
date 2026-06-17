@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><%- include('partials/head') %></head>
+<body>
+<%- include('partials/navbar', { currentPage: 'bounties' }) %>
+<div class="main-container">
+    <%- include('partials/sidebar', { currentPage: 'bounties' }) %>
+    <div class="content-area">
+        <div class="bounties-page">
+            <div class="bounties-header">
+                <h2>💰 Primes</h2>
+                <div class="bounties-balance">Solde : <strong><%= user.walletBalance %></strong> crédits</div>
+                <button id="createBountyBtn" class="btn-create-bounty">+ Créer une prime</button>
+            </div>
+
+            <!-- Formulaire de création (caché par défaut) -->
+            <div class="create-bounty-form" id="createBountyForm" style="display:none;">
+                <h3>Nouvelle prime</h3>
+                <div class="form-group">
+                    <label>Titre</label>
+                    <input type="text" id="bountyTitle" placeholder="Ex: Corriger le bug de connexion" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="bountyDesc" rows="4" placeholder="Décris précisément la tâche..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Récompense (crédits)</label>
+                    <input type="number" id="bountyReward" min="1" max="<%= user.walletBalance %>" placeholder="Ex: 50">
+                </div>
+                <div style="display:flex; gap:12px; margin-top:16px;">
+                    <button id="submitBounty" class="btn-primary-action">Créer la prime</button>
+                    <button id="cancelBounty" class="btn-secondary-action">Annuler</button>
+                </div>
+            </div>
+
+            <div class="bounties-list">
+                <% if (bounties.length === 0) { %>
+                    <div class="empty-state">
+                        <div style="font-size:48px; margin-bottom:16px;">💰</div>
+                        <p>Aucune prime disponible pour le moment.</p>
+                        <p style="color:var(--text-secondary);">Sois le premier à en créer une !</p>
+                    </div>
+                <% } else { %>
+                    <% bounties.forEach(b => { %>
+                    <div class="bounty-card status-<%= b.status %>">
+                        <div class="bounty-card-header">
+                            <div class="bounty-status-badge status-<%= b.status %>">
+                                <%= b.status === 'open' ? '🟢 Ouverte' : b.status === 'claimed' ? '✅ Attribuée' : '🔴 Fermée' %>
+                            </div>
+                            <div class="bounty-reward">💰 <%= b.rewardAmount %> crédits</div>
+                        </div>
+                        <h3 class="bounty-title"><%= b.title %></h3>
+                        <p class="bounty-desc"><%= b.description %></p>
+                        <div class="bounty-footer">
+                            <div class="bounty-author">
+                                <img src="<%= b.createdBy.photoProfil %>" alt="">
+                                <span><%= b.createdBy.nom %></span>
+                            </div>
+                            <div class="bounty-applicants"><%= b.applicants.length %> candidat(s)</div>
+                            <% if (b.status === 'open' && b.createdBy._id.toString() !== user._id.toString()) { %>
+                                <button class="btn-apply-bounty" data-id="<%= b._id %>">Postuler</button>
+                            <% } %>
+                            <% if (b.createdBy._id.toString() === user._id.toString() && b.status === 'open' && b.applicants.length > 0) { %>
+                                <button class="btn-view-applicants" data-id="<%= b._id %>" data-applicants='<%- JSON.stringify(b.applicants) %>'>Voir candidats</button>
+                            <% } %>
+                        </div>
+                    </div>
+                    <% }) %>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal postulation -->
+<div id="applyModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <h3>Postuler à cette prime</h3>
+        <textarea id="applyMessage" rows="4" placeholder="Décris comment tu vas résoudre cette tâche..." maxlength="500"></textarea>
+        <div style="display:flex; gap:12px; margin-top:16px;">
+            <button id="submitApply" class="btn-primary-action">Envoyer ma candidature</button>
+            <button id="cancelApply" class="btn-secondary-action">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentBountyId = null
+
+document.getElementById("createBountyBtn").addEventListener("click", () => {
+    document.getElementById("createBountyForm").style.display = "block"
+    document.getElementById("createBountyBtn").style.display = "none"
+})
+document.getElementById("cancelBounty").addEventListener("click", () => {
+    document.getElementById("createBountyForm").style.display = "none"
+    document.getElementById("createBountyBtn").style.display = "block"
+})
+document.getElementById("submitBounty").addEventListener("click", async () => {
+    const title = document.getElementById("bountyTitle").value.trim()
+    const description = document.getElementById("bountyDesc").value.trim()
+    const rewardAmount = parseInt(document.getElementById("bountyReward").value)
+    if (!title || !description || !rewardAmount) return alert("Tous les champs sont requis.")
+    const res = await fetch("/api/bounties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description, rewardAmount })
+    })
+    const data = await res.json()
+    if (data.success) { location.reload() } else { alert(data.error) }
+})
+document.querySelectorAll(".btn-apply-bounty").forEach(btn => {
+    btn.addEventListener("click", () => {
+        currentBountyId = btn.dataset.id
+        document.getElementById("applyModal").style.display = "flex"
+    })
+})
+document.getElementById("cancelApply").addEventListener("click", () => {
+    document.getElementById("applyModal").style.display = "none"
+})
+document.getElementById("submitApply").addEventListener("click", async () => {
+    const message = document.getElementById("applyMessage").value.trim()
+    const res = await fetch(`/api/bounties/${currentBountyId}/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+    })
+    const data = await res.json()
+    if (data.success) { alert("Candidature envoyée !"); location.reload() } else { alert(data.error) }
+})
+</script>
+</body>
+</html>

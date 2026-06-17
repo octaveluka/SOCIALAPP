@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body>
+    <%- include('partials/navbar', { currentPage: 'profile' }) %>
+
+    <div class="main-container">
+        <%- include('partials/sidebar', { currentPage: 'profile' }) %>
+
+        <main class="feed">
+
+            <% if (success && success.length > 0) { %>
+                <div class="alert alert-success">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span><%= success[0] %></span>
+                </div>
+            <% } %>
+
+            <% if (error && error.length > 0) { %>
+                <div class="alert alert-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><%= error[0] %></span>
+                </div>
+            <% } %>
+
+            <!-- En-tête du profil -->
+            <div class="card profile-header">
+                <div class="profile-cover"></div>
+                <div class="profile-header-content">
+                    <img src="<%= profileUser.photoProfil %>" class="profile-avatar" alt="">
+                    <div class="profile-name">
+                        <%= profileUser.nom %>
+                        <%- include('partials/badges', { badges: profileUser.badges }) %>
+                    </div>
+                    <% if (profileUser.bio) { %>
+                        <div class="profile-bio"><%= profileUser.bio %></div>
+                    <% } else { %>
+                        <div class="profile-bio" style="opacity:0.5;">Aucune bio renseignée</div>
+                    <% } %>
+
+                    <div class="profile-stats">
+                        <div class="profile-stat">
+                            <strong><%= posts.length %></strong>
+                            <span>Publications</span>
+                        </div>
+                        <div class="profile-stat">
+                            <strong><%= profileUser.amis.length %></strong>
+                            <span>Amis</span>
+                        </div>
+                        <% if (!isOwnProfile) { %>
+                            <div class="profile-stat">
+                                <strong><%= amisCommuns %></strong>
+                                <span>En commun</span>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <div style="margin-top:18px; display:flex; gap:10px; justify-content:center;">
+                        <% if (isOwnProfile) { %>
+                            <a href="/profile/edit/me" class="btn btn-secondary" style="width:auto; padding:10px 24px;">
+                                <i class="fa-solid fa-pen"></i> Modifier le profil
+                            </a>
+                        <% } else if (isFriend) { %>
+                            <form action="/friends/remove/<%= profileUser._id %>" method="POST" style="margin:0;">
+                                <button type="submit" class="btn btn-secondary" style="width:auto; padding:10px 24px;">
+                                    <i class="fa-solid fa-user-check"></i> Amis
+                                </button>
+                            </form>
+                            <a href="/messages/<%= profileUser._id %>" class="btn" style="width:auto; padding:10px 24px;">
+                                <i class="fa-solid fa-comment"></i> Message
+                            </a>
+                        <% } else if (requestSent) { %>
+                            <form action="/friends/cancel/<%= profileUser._id %>" method="POST" style="margin:0;">
+                                <button type="submit" class="btn btn-secondary" style="width:auto; padding:10px 24px;">
+                                    <i class="fa-solid fa-clock"></i> Annuler la demande
+                                </button>
+                            </form>
+                        <% } else if (requestReceived) { %>
+                            <form action="/friends/accept/<%= profileUser._id %>" method="POST" style="margin:0;">
+                                <button type="submit" class="btn" style="width:auto; padding:10px 24px;">
+                                    <i class="fa-solid fa-check"></i> Accepter la demande
+                                </button>
+                            </form>
+                        <% } else { %>
+                            <form action="/friends/request/<%= profileUser._id %>" method="POST" style="margin:0;">
+                                <button type="submit" class="btn" style="width:auto; padding:10px 24px;">
+                                    <i class="fa-solid fa-user-plus"></i> Ajouter
+                                </button>
+                            </form>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Publications -->
+            <% if (posts.length === 0) { %>
+                <div class="card empty-state">
+                    <i class="fa-solid fa-newspaper"></i>
+                    <p>Aucune publication pour le moment.</p>
+                </div>
+            <% } %>
+
+            <% posts.forEach(post => { %>
+                <div class="card post">
+                    <div class="post-header">
+                        <img src="<%= post.auteur.photoProfil %>" class="post-avatar" alt="">
+                        <div>
+                            <div class="post-author">
+                                <%= post.auteur.nom %>
+                                <%- include('partials/badges', { badges: post.auteur.badges }) %>
+                            </div>
+                            <div class="post-date">
+                                <%= new Date(post.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="post-content"><%= post.contenu %></div>
+
+                    <% if (post.image) { %>
+                        <img src="<%= post.image %>" class="post-image" alt="">
+                    <% } %>
+
+                    <div class="post-actions">
+                        <button class="like-btn <%= post.likes.some(id => id.toString() === currentUserId) ? 'liked' : '' %>"
+                                data-id="<%= post._id %>">
+                            <i class="fa-solid fa-thumbs-up"></i>
+                            <span class="likes-count"><%= post.likes.length %></span> J'aime
+                        </button>
+
+                        <button onclick="toggleComments('<%= post._id %>')">
+                            <i class="fa-solid fa-comment"></i>
+                            <span class="comments-count"><%= post.commentaires.length %></span> Commentaires
+                        </button>
+
+                        <% if (post.auteur._id.toString() === currentUserId) { %>
+                            <form action="/post/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Supprimer ce post ?')">
+                                <button type="submit">
+                                    <i class="fa-solid fa-trash"></i>
+                                    Supprimer
+                                </button>
+                            </form>
+                        <% } %>
+                    </div>
+
+                    <div class="comments-section" id="comments-<%= post._id %>" style="display:none;">
+                        <div class="comments-list">
+                            <% post.commentaires.forEach(comment => { %>
+                                <div class="comment">
+                                    <img src="<%= comment.auteur.photoProfil %>" class="comment-avatar" alt="">
+                                    <div class="comment-bubble">
+                                        <div class="comment-author">
+                                            <%= comment.auteur.nom %>
+                                            <%- include('partials/badges', { badges: comment.auteur.badges }) %>
+                                        </div>
+                                        <div><%= comment.texte %></div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+
+                        <form class="comment-form ajax-comment-form" data-id="<%= post._id %>">
+                            <input type="text" name="texte" placeholder="Écrire un commentaire..." required>
+                            <button type="submit">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% }) %>
+
+        </main>
+
+        <aside class="right-sidebar">
+            <h3 style="margin-bottom:12px; font-size:14px; color:var(--text-secondary);">INFORMATIONS</h3>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.8;">
+                <i class="fa-solid fa-calendar"></i> Membre depuis <%= new Date(profileUser.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) %><br>
+                <i class="fa-solid <%= profileUser.enLigne ? 'fa-circle' : 'fa-circle-o' %>" style="color: <%= profileUser.enLigne ? '#16a34a' : '#94a3b8' %>"></i>
+                <%= profileUser.enLigne ? 'En ligne' : 'Hors ligne' %>
+            </p>
+        </aside>
+    </div>
+
+    <script src="/js/feed.js"></script>
+    <script>
+        function toggleComments(postId) {
+            const el = document.getElementById('comments-' + postId)
+            el.style.display = el.style.display === 'none' ? 'block' : 'none'
+        }
+    </script>
+</body>
+</html>

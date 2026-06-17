@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><%- include('partials/head') %></head>
+<body>
+<%- include('partials/navbar', { currentPage: 'shop' }) %>
+<div class="main-container">
+    <%- include('partials/sidebar', { currentPage: 'shop' }) %>
+    <div class="content-area">
+        <div class="shop-page">
+            <div class="shop-header">
+                <h2>🛍️ Boutique</h2>
+                <div class="shop-balance">
+                    <span>💰</span>
+                    <span id="shopBalance"><%= user.walletBalance %></span> crédits
+                </div>
+            </div>
+
+            <% if (locals.success && success.length) { %>
+                <div class="flash success"><%= success[0] %></div>
+            <% } %>
+            <% if (locals.error && error.length) { %>
+                <div class="flash error"><%= error[0] %></div>
+            <% } %>
+
+            <p style="margin-bottom:24px; color:var(--text-secondary);">Personnalise l'apparence de l'application avec des thèmes visuels.</p>
+
+            <div class="shop-grid">
+                <% shopItems.forEach(item => { %>
+                <div class="shop-item theme-preview-<%= item.theme %> <%= user.theme === item.theme ? 'active-theme' : '' %>">
+                    <div class="shop-item-emoji"><%= item.emoji %></div>
+                    <div class="shop-item-name"><%= item.name %></div>
+                    <div class="shop-item-price">
+                        <% if (item.price === 0) { %>
+                            <span class="price-free">Gratuit</span>
+                        <% } else { %>
+                            <span class="price-credits">💰 <%= item.price %> crédits</span>
+                        <% } %>
+                    </div>
+                    <% if (user.theme === item.theme) { %>
+                        <button class="btn-shop-active" disabled>✓ Actif</button>
+                    <% } else { %>
+                        <button class="btn-shop-buy" data-item-id="<%= item.id %>" data-price="<%= item.price %>">
+                            <%= item.price === 0 ? 'Activer' : 'Acheter' %>
+                        </button>
+                    <% } %>
+                </div>
+                <% }) %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll(".btn-shop-buy").forEach(btn => {
+    btn.addEventListener("click", async function() {
+        const itemId = this.dataset.itemId
+        const price = parseInt(this.dataset.price)
+        const balance = parseInt(document.getElementById("shopBalance").textContent)
+        if (price > 0 && balance < price) {
+            alert(`Solde insuffisant ! Tu as ${balance} crédits, il en faut ${price}.`)
+            return
+        }
+        this.disabled = true
+        this.textContent = "..."
+        try {
+            const res = await fetch("/api/shop/buy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ itemId })
+            })
+            const data = await res.json()
+            if (data.success) {
+                if (data.balance !== undefined) {
+                    document.getElementById("shopBalance").textContent = data.balance
+                }
+                location.reload()
+            } else {
+                alert(data.error || "Erreur lors de l'achat.")
+                this.disabled = false
+                this.textContent = price === 0 ? "Activer" : "Acheter"
+            }
+        } catch(e) {
+            alert("Erreur réseau.")
+            this.disabled = false
+        }
+    })
+})
+</script>
+</body>
+</html>

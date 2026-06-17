@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body>
+    <%- include('partials/navbar', { currentPage: 'admin' }) %>
+
+    <div class="main-container">
+        <%- include('partials/sidebar', { currentPage: 'admin' }) %>
+
+        <main class="feed">
+
+            <div class="page-header">
+                <div>
+                    <h1>Dashboard Admin</h1>
+                    <div class="subtitle">Vue d'ensemble de SocialApp</div>
+                </div>
+                <a href="/admin/users" class="btn" style="width:auto; padding:10px 20px;">
+                    <i class="fa-solid fa-users-gear"></i> Gérer les utilisateurs
+                </a>
+            </div>
+
+            <!-- Stats -->
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div style="width:48px; height:48px; background:var(--primary-light); border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <i class="fa-solid fa-users" style="color:var(--primary); font-size:20px;"></i>
+                    </div>
+                    <div class="stat-value"><%= stats.totalUsers %></div>
+                    <div class="stat-label">Utilisateurs</div>
+                </div>
+                <div class="stat-box">
+                    <div style="width:48px; height:48px; background:#dcfce7; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <i class="fa-solid fa-circle" style="color:var(--success); font-size:16px;"></i>
+                    </div>
+                    <div class="stat-value"><%= stats.onlineUsers %></div>
+                    <div class="stat-label">En ligne</div>
+                </div>
+                <div class="stat-box">
+                    <div style="width:48px; height:48px; background:#fee2e2; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <i class="fa-solid fa-ban" style="color:var(--error); font-size:20px;"></i>
+                    </div>
+                    <div class="stat-value"><%= stats.disabledUsers %></div>
+                    <div class="stat-label">Désactivés</div>
+                </div>
+                <div class="stat-box">
+                    <div style="width:48px; height:48px; background:#f5f3ff; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <i class="fa-solid fa-newspaper" style="color:#7c3aed; font-size:20px;"></i>
+                    </div>
+                    <div class="stat-value"><%= stats.totalPosts %></div>
+                    <div class="stat-label">Publications</div>
+                </div>
+                <div class="stat-box">
+                    <div style="width:48px; height:48px; background:#fef3c7; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <i class="fa-solid fa-people-group" style="color:var(--warning); font-size:20px;"></i>
+                    </div>
+                    <div class="stat-value"><%= stats.totalGroups %></div>
+                    <div class="stat-label">Groupes</div>
+                </div>
+                <div class="stat-box">
+                    <div style="width:48px; height:48px; background:#ecfeff; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <i class="fa-solid fa-comment-dots" style="color:var(--accent); font-size:20px;"></i>
+                    </div>
+                    <div class="stat-value"><%= stats.totalMessages %></div>
+                    <div class="stat-label">Messages</div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card">
+                <div class="section-title">
+                    <i class="fa-solid fa-bolt"></i>
+                    Actions rapides
+                </div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <a href="/admin/users" class="btn" style="width:auto; padding:10px 20px;">
+                        <i class="fa-solid fa-users-gear"></i> Gérer les utilisateurs
+                    </a>
+                    <a href="/admin/users?q=" class="btn btn-secondary" style="width:auto; padding:10px 20px;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Rechercher un utilisateur
+                    </a>
+                    <a href="/admin/assistant" class="btn" style="width:auto; padding:10px 20px;">
+                        <i class="fa-solid fa-robot"></i> Gérer l'assistant
+                    </a>
+                    <form action="/admin/welcome-campaign" method="POST" style="margin:0;">
+                        <button type="submit" class="btn btn-secondary" style="width:auto; padding:10px 20px;">
+                            <i class="fa-solid fa-envelope"></i> Envoyer la bienvenue à tous
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</body>
+</html>

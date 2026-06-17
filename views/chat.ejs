@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><%- include('partials/head') %></head>
+<body class="chat-page">
+<%- include('partials/navbar', { currentPage: 'messages' }) %>
+
+<div class="main-container chat-main-container">
+  <div class="chat-page-container">
+
+    <!-- HEADER -->
+    <div class="chat-header">
+      <a href="/messages" class="chat-back"><i class="fa-solid fa-arrow-left"></i></a>
+      <img src="<%= otherUser.photoProfil %>" alt="" id="headerAvatar">
+      <div>
+        <div>
+          <%= otherUser.nom %>
+          <%- include('partials/badges', { badges: otherUser.badges || [] }) %>
+        </div>
+        <div style="font-size:11px; font-weight:400; color:var(--text-secondary);" id="userStatus">
+          <%= otherUser.enLigne ? 'En ligne' : 'Hors ligne' %>
+        </div>
+        <div id="typingIndicator" style="font-size:11px; color:var(--primary); display:none;">en train d'écrire…</div>
+      </div>
+      <!-- Actions header -->
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+        <button id="vaultBtn" title="Coffre-fort" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-secondary);">
+          <i class="fa-solid fa-lock<%- isLocked ? '' : '-open' %>"></i>
+        </button>
+        <button id="incognitoBtn" title="Ghost Typing" style="background:none;border:none;cursor:pointer;font-size:18px;color:<%= isIncognito ? 'var(--primary)' : 'var(--text-secondary)' %>;">
+          <i class="fa-solid fa-ghost"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- VAULT OVERLAY -->
+    <div id="vaultOverlay" class="vault-overlay" style="display:<%= isLocked ? 'flex' : 'none' %>;">
+      <div class="vault-box">
+        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+        <h3>Conversation verrouillée</h3>
+        <p>Entre ton PIN pour accéder</p>
+        <input type="password" id="vaultPinInput" placeholder="PIN" maxlength="8" class="vault-pin-input">
+        <button id="vaultUnlockBtn" class="btn-primary-action" style="width:100%; margin-top:12px;">Déverrouiller</button>
+        <div id="vaultError" style="color:var(--error); font-size:13px; margin-top:8px; display:none;">PIN incorrect</div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="chat-messages" id="chatMessages">
+      <% messages.forEach(msg => {
+        const isSent = msg.expediteur.toString() === currentUserId
+        const isDeleted = msg.isDeleted
+        const isBurn = msg.expiresAt
+      %>
+        <div class="message-wrapper-ib <%= isSent ? 'sent-wrapper' : 'received-wrapper' %>" data-id="<%= msg._id %>">
+          <% if (isDeleted) { %>
+            <div class="message-bubble deleted-msg <%= isSent ? 'sent' : 'received' %>">
+              <span class="deleted-text"><i class="fa-solid fa-ban"></i> Ce message a été supprimé</span>
+            </div>
+          <% } else if (msg.audio) { %>
+            <div class="message-bubble audio <%= isSent ? 'sent' : 'received' %>" data-audio="<%= msg.audio %>">
+              <div class="audio-wrapper">
+                <button class="play-btn"><i class="fa-solid fa-play"></i></button>
+                <div class="waveform"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                <span class="duration"><%= msg.duration ? Math.floor(msg.duration/60)+':'+String(Math.floor(msg.duration%60)).padStart(2,'0') : '0:00' %></span>
+              </div>
+              <audio class="audio-player" src="<%= msg.audio %>" preload="metadata"></audio>
+              <% if (isSent) { %><span class="message-status"><i class="fa-solid <%= msg.lu ? 'fa-check-double read' : 'fa-check' %>"></i></span><% } %>
+            </div>
+          <% } else if (msg.image) { %>
+            <div class="message-bubble img-bubble <%= isSent ? 'sent' : 'received' %> <%= msg.isSticker ? 'sticker-bubble' : '' %>">
+              <% if (msg.repondA && msg.repondA.contenu) { %>
+                <div class="reply-quote"><i class="fa-solid fa-reply"></i> <%= msg.repondA.contenu.slice(0,50) %></div>
+              <% } %>
+              <div class="message-image">
+                <img src="<%= msg.image %>" alt="Photo" class="<%= msg.isSticker ? 'sticker-img' : 'chat-img' %>">
+                <% if (!msg.isSticker) { %>
+                  <a href="<%= msg.image %>" download class="img-download-btn" title="Télécharger"><i class="fa-solid fa-download"></i></a>
+                <% } %>
+              </div>
+              <% if (isSent) { %><span class="message-status"><i class="fa-solid <%= msg.lu ? 'fa-check-double read' : 'fa-check' %>"></i></span><% } %>
+            </div>
+          <% } else { %>
+            <div class="message-bubble <%= isSent ? 'sent' : 'received' %> <%= isBurn ? 'burn-msg' : '' %> <%= msg.isCodeBlock ? 'code-block-msg' : '' %>" <%= isBurn ? `data-expires="${msg.expiresAt}"` : '' %>>
+              <% if (msg.repondA) { %>
+                <div class="reply-quote"><i class="fa-solid fa-reply"></i>
+                  <% if (msg.repondA.image) { %><i class="fa-solid fa-image"></i> Image
+                  <% } else { %><%= typeof msg.repondA === 'object' ? (msg.repondA.contenu || '').slice(0,50) : '' %>
+                  <% } %>
+                </div>
+              <% } %>
+              <% if (msg.isCodeBlock) { %>
+                <pre class="code-content"><code><%= msg.contenu %></code></pre>
+                <% if (msg.codeSignature) { %><div class="code-signature"><i class="fa-solid fa-signature"></i> <%= msg.codeSignature %></div><% } %>
+              <% } else { %>
+                <span class="message-text"><%= msg.contenu %></span>
+              <% } %>
+              <% if (isBurn) { %><div class="burn-timer" data-expires="<%= msg.expiresAt %>">⏳ …</div><% } %>
+              <% if (isSent) { %><span class="message-status"><i class="fa-solid <%= msg.lu ? 'fa-check-double read' : 'fa-check' %>"></i></span><% } %>
+            </div>
+          <% } %>
+          <!-- Réactions -->
+          <% if (msg.reactions && msg.reactions.length > 0) { %>
+            <div class="message-reactions-ib">
+              <% const gr={};msg.reactions.forEach(r=>{gr[r.emoji]=(gr[r.emoji]||0)+1}) %>
+              <% Object.keys(gr).forEach(emoji=>{ %><span class="reaction-pill"><%= emoji %> <%= gr[emoji] %></span><% }) %>
+            </div>
+          <% } %>
+          <!-- Toolbar (hover) -->
+          <div class="msg-toolbar-ib">
+            <% if (!isDeleted) { %>
+              <button class="tb-btn reply-ib-btn" title="Répondre"><i class="fa-solid fa-reply"></i></button>
+              <button class="tb-btn react-ib-btn" title="Réagir"><i class="fa-regular fa-face-smile"></i></button>
+              <% if (!isSent) { %>
+                <button class="tb-btn translate-ib-btn" title="Traduire"><i class="fa-solid fa-language"></i></button>
+              <% } %>
+              <% if (isSent) { %>
+                <button class="tb-btn delete-ib-btn" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+              <% } %>
+            <% } %>
+          </div>
+          <!-- Emoji picker -->
+          <div class="emoji-picker-ib">
+            <span data-emoji="👍">👍</span><span data-emoji="❤️">❤️</span><span data-emoji="😂">😂</span>
+            <span data-emoji="😮">😮</span><span data-emoji="😢">😢</span><span data-emoji="🔥">🔥</span>
+          </div>
+          <!-- Translation result -->
+          <div class="translation-result" style="display:none;"></div>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- REPLY PREVIEW -->
+    <div class="reply-preview" id="replyPreview" style="display:none;">
+      <div class="reply-preview-content"><i class="fa-solid fa-reply"></i><span id="replyPreviewText"></span></div>
+      <button id="cancelReply"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- COMMANDES IA HINT -->
+    <div id="aiCommandHint" class="ai-command-hint" style="display:none;"></div>
+
+    <!-- FORMULAIRE -->
+    <form class="chat-input" id="chatForm">
+      <button type="button" id="photoBtn" class="chat-icon-btn" title="Photo"><i class="fa-solid fa-image"></i></button>
+      <input type="file" id="photoInput" accept="image/*" style="display:none;">
+      <input type="text" id="messageInput" placeholder="Écrire un message… (/+ pour l'IA)" autocomplete="off">
+      <button type="button" id="microBtn" class="chat-icon-btn" title="Vocal"><i class="fa-solid fa-microphone"></i></button>
+      <button type="submit" id="sendBtn" class="chat-send-btn" style="display:none;"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const currentUserId = "<%= currentUserId %>";
+const otherUserId = "<%= otherUser._id %>";
+let isIncognito = <%= isIncognito %>;
+let isLocked = <%= isLocked %>;
+let replyingTo = null;
+let mediaRecorder = null, audioChunks = [], isRecording = false, recordingTimer = null, recordingSeconds = 0;
+
+const socket = io({ query: { userId: currentUserId } });
+const chatMessages = document.getElementById("chatMessages");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const microBtn = document.getElementById("microBtn");
+const replyPreview = document.getElementById("replyPreview");
+const replyPreviewText = document.getElementById("replyPreviewText");
+const cancelReply = document.getElementById("cancelReply");
+const aiHint = document.getElementById("aiCommandHint");
+
+// =============================================
+// VAULT (COFFRE-FORT)
+// =============================================
+const vaultOverlay = document.getElementById("vaultOverlay");
+const vaultPinInput = document.getElementById("vaultPinInput");
+const vaultUnlockBtn = document.getElementById("vaultUnlockBtn");
+const vaultError = document.getElementById("vaultError");
+const vaultBtn = document.getElementById("vaultBtn");
+const chatContent = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+
+if (isLocked) {
+  chatContent.style.filter = "blur(12px)";
+  chatForm.style.display = "none";
+}
+
+vaultUnlockBtn.addEventListener("click", async () => {
+  const pin = vaultPinInput.value.trim();
+  if (!pin) return;
+  const res = await fetch(`/api/vault/unlock/${otherUserId}`, {
+    method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ pin })
+  });
+  const data = await res.json();
+  if (data.unlocked || data.locked === false) {
+    vaultOverlay.style.display = "none";
+    chatContent.style.filter = "none";
+    chatForm.style.display = "flex";
+    isLocked = false;
+  } else {
+    vaultError.style.display = "block";
+    setTimeout(() => { vaultError.style.display = "none"; }, 2000);
+  }
+});
+vaultPinInput.addEventListener("keydown", e => { if (e.key === "Enter") vaultUnlockBtn.click(); });
+
+vaultBtn.addEventListener("click", async () => {
+  if (isLocked) { vaultOverlay.style.display = "flex"; return; }
+  const pin = prompt("Définis un code PIN (4 chiffres min) pour verrouiller cette conversation :");
+  if (!pin || pin.length < 4) { if (pin !== null) alert("PIN de 4 chiffres minimum."); return; }
+  const res = await fetch(`/api/vault/lock/${otherUserId}`, {
+    method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ pin })
+  });
+  const data = await res.json();
+  if (data.success) {
+    isLocked = true;
+    vaultBtn.innerHTML = '<i class="fa-solid fa-lock"></i>';
+    alert("Conversation verrouillée !");
+  }
+});
+
+// =============================================
+// INCOGNITO / GHOST TYPING
+// =============================================
+document.getElementById("incognitoBtn").addEventListener("click", async () => {
+  isIncognito = !isIncognito;
+  const btn = document.getElementById("incognitoBtn");
+  btn.style.color = isIncognito ? "var(--primary)" : "var(--text-secondary)";
+  await fetch("/api/settings/incognito-input", {
+    method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ enabled: isIncognito })
+  });
+});
+
+// =============================================
+// TYPING INDICATOR
+// =============================================
+let typingTimeout;
+messageInput.addEventListener("input", function() {
+  const hasText = this.value.trim().length > 0;
+  microBtn.style.display = hasText ? "none" : "flex";
+  sendBtn.style.display = hasText ? "flex" : "none";
+
+  // IA hint
+  const val = this.value;
+  const cmds = { "/+": "🤖 Demande à l'IA", "/imagine": "🎨 Génère une image", "/edit": "✏️ Édite une image (reply requis)", "/sticker": "🎭 Crée un sticker", "/find": "🔍 Cherche dans l'historique", "/burn": "🔥 Message éphémère /burn <sec>", "/send": "💸 /send @pseudo montant", "/roll": "🎲 Lance les dés" };
+  let hint = null;
+  for (const [cmd, desc] of Object.entries(cmds)) {
+    if (val.startsWith(cmd)) { hint = desc; break; }
+  }
+  if (hint) { aiHint.textContent = hint; aiHint.style.display = "block"; }
+  else { aiHint.style.display = "none"; }
+
+  // Ghost typing
+  if (!isIncognito) {
+    socket.emit("typing", { from: currentUserId, to: otherUserId, isTyping: true });
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      socket.emit("typing", { from: currentUserId, to: otherUserId, isTyping: false });
+    }, 1500);
+  }
+});
+
+socket.on("typing", (data) => {
+  if (data.from !== otherUserId) return;
+  const el = document.getElementById("typingIndicator");
+  const status = document.getElementById("userStatus");
+  if (data.isTyping) { el.style.display = "block"; status.style.display = "none"; }
+  else { el.style.display = "none"; status.style.display = "block"; }
+});
+
+// =============================================
+// PHOTO
+// =============================================
+document.getElementById("photoBtn").addEventListener("click", () => document.getElementById("photoInput").click());
+document.getElementById("photoInput").addEventListener("change", async function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert("Fichier trop lourd (5 Mo max)."); return; }
+  const formData = new FormData();
+  formData.append("image", file); formData.append("to", otherUserId);
+  const res = await fetch("/messages/photo", { method: "POST", body: formData });
+  const data = await res.json();
+  if (!data.success) alert("Erreur: " + data.error);
+  this.value = "";
+});
+
+// =============================================
+// AUDIO
+// =============================================
+microBtn.addEventListener("click", async function() {
+  if (isRecording) {
+    mediaRecorder.stop(); microBtn.style.color = "var(--text-secondary)";
+    microBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+    clearInterval(recordingTimer); document.querySelector(".recording-indicator")?.remove(); isRecording = false; return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    audioChunks = []; recordingSeconds = 0;
+    const indicator = document.createElement("div"); indicator.className = "recording-indicator";
+    indicator.style.cssText = "display:flex;align-items:center;gap:8px;padding:0 12px;font-size:14px;";
+    indicator.innerHTML = `<span id="recordingTimer" style="font-weight:600;color:var(--primary);">0:00</span><button id="cancelRecording" style="background:none;border:none;color:var(--error);font-size:16px;cursor:pointer;"><i class="fa-solid fa-xmark-circle"></i> Annuler</button>`;
+    messageInput.parentNode.insertBefore(indicator, messageInput.nextSibling);
+    recordingTimer = setInterval(() => {
+      recordingSeconds++;
+      const m = Math.floor(recordingSeconds/60), s = String(recordingSeconds%60).padStart(2,'0');
+      const el = document.getElementById("recordingTimer"); if (el) el.textContent = m+":"+s;
+    }, 1000);
+    document.getElementById("cancelRecording").addEventListener("click", () => {
+      mediaRecorder.stop(); clearInterval(recordingTimer); indicator.remove();
+      microBtn.style.color = "var(--text-secondary)"; microBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; isRecording = false;
+    });
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      clearInterval(recordingTimer); indicator.remove();
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      sendAudioMsg(blob, recordingSeconds); audioChunks = [];
+      microBtn.style.color = "var(--text-secondary)"; microBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; isRecording = false;
+    };
+    mediaRecorder.start(); isRecording = true;
+    microBtn.style.color = "#ef4444"; microBtn.innerHTML = '<i class="fa-solid fa-circle"></i>';
+  } catch (e) { alert("Impossible d'accéder au microphone."); }
+});
+
+async function sendAudioMsg(blob, duration) {
+  const fd = new FormData();
+  fd.append("audio", blob, "audio.webm"); fd.append("to", otherUserId); fd.append("duration", duration);
+  const res = await fetch("/messages/audio", { method: "POST", body: fd });
+  const data = await res.json();
+  if (!data.success) console.error(data.error);
+}
+
+// =============================================
+// ENVOYER MESSAGE TEXTE
+// =============================================
+document.getElementById("chatForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const contenu = messageInput.value.trim();
+  if (!contenu) return;
+  messageInput.value = "";
+  microBtn.style.display = "flex"; sendBtn.style.display = "none";
+  aiHint.style.display = "none";
+  socket.emit("typing", { from: currentUserId, to: otherUserId, isTyping: false });
+
+  socket.emit("send-message", {
+    from: currentUserId, to: otherUserId, contenu, type: "text",
+    replyTo: replyingTo ? replyingTo.id : null
+  });
+  cancelReplyAction();
+});
+
+// =============================================
+// RECEVOIR MESSAGE
+// =============================================
+socket.on("new-message", data => {
+  const concerne = (data.expediteur === currentUserId && data.destinataire === otherUserId) ||
+                   (data.expediteur === otherUserId && data.destinataire === currentUserId);
+  if (!concerne) return;
+  const isSent = data.expediteur === currentUserId;
+  appendIbMessage(data, isSent);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  if (!isSent) socket.emit("mark-read", { from: otherUserId, to: currentUserId });
+});
+
+socket.on("messages-read", data => {
+  if (data.by !== otherUserId) return;
+  document.querySelectorAll(".message-wrapper-ib.sent-wrapper .message-status i").forEach(i => {
+    i.classList.remove("fa-check"); i.classList.add("fa-check-double","read");
+  });
+});
+
+socket.on("user-status", data => {
+  if (data.userId !== otherUserId) return;
+  document.getElementById("userStatus").innerText = data.enLigne ? "En ligne" : "Hors ligne";
+});
+
+socket.on("message-deleted", data => {
+  const wrapper = chatMessages.querySelector(`[data-id="${data.messageId}"]`);
+  if (!wrapper) return;
+  const bubble = wrapper.querySelector(".message-bubble");
+  if (bubble) {
+    bubble.className = bubble.className.replace(/\bsent\b|\breceived\b/,'') + " deleted-msg";
+    bubble.innerHTML = '<span class="deleted-text"><i class="fa-solid fa-ban"></i> Ce message a été supprimé</span>';
+  }
+  wrapper.querySelector(".msg-toolbar-ib")?.remove();
+  wrapper.querySelector(".emoji-picker-ib")?.remove();
+});
+
+socket.on("message-reacted-ib", data => {
+  const wrapper = chatMessages.querySelector(`[data-id="${data.messageId}"]`);
+  if (!wrapper) return;
+  let reactDiv = wrapper.querySelector(".message-reactions-ib");
+  if (!reactDiv) { reactDiv = document.createElement("div"); reactDiv.className = "message-reactions-ib"; wrapper.appendChild(reactDiv); }
+  const grouped = {};
+  data.reactions.forEach(r => { grouped[r.emoji] = (grouped[r.emoji]||0)+1; });
+  reactDiv.innerHTML = Object.entries(grouped).map(([e,c]) => `<span class="reaction-pill">${e} ${c}</span>`).join("");
+});
+
+// =============================================
+// TOOLBAR : REPLY, REACT, DELETE, TRANSLATE
+// =============================================
+chatMessages.addEventListener("click", async e => {
+  // Play audio
+  const playBtn = e.target.closest(".play-btn");
+  if (playBtn) { playAudio(playBtn.closest(".message-bubble.audio")); return; }
+
+  // Reply
+  const replyBtn = e.target.closest(".reply-ib-btn");
+  if (replyBtn) {
+    const wrapper = replyBtn.closest(".message-wrapper-ib");
+    const msgId = wrapper.dataset.id;
+    const textEl = wrapper.querySelector(".message-text");
+    const imgEl = wrapper.querySelector(".chat-img");
+    const text = textEl ? textEl.innerText : (imgEl ? "[Image]" : "");
+    replyingTo = { id: msgId, text };
+    replyPreviewText.innerText = text.slice(0,60) + (text.length > 60 ? "…" : "");
+    replyPreview.style.display = "flex";
+    messageInput.focus();
+    return;
+  }
+
+  // React
+  const reactBtn = e.target.closest(".react-ib-btn");
+  if (reactBtn) {
+    const wrapper = reactBtn.closest(".message-wrapper-ib");
+    document.querySelectorAll(".emoji-picker-ib.active").forEach(p => p.classList.remove("active"));
+    wrapper.querySelector(".emoji-picker-ib")?.classList.toggle("active");
+    return;
+  }
+
+  // Emoji picked
+  const emojiSpan = e.target.closest(".emoji-picker-ib span");
+  if (emojiSpan) {
+    const wrapper = emojiSpan.closest(".message-wrapper-ib");
+    const msgId = wrapper.dataset.id;
+    const emoji = emojiSpan.dataset.emoji;
+    await fetch(`/api/messages/${msgId}/react`, {
+      method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ emoji })
+    });
+    wrapper.querySelector(".emoji-picker-ib")?.classList.remove("active");
+    return;
+  }
+
+  // Delete
+  const deleteBtn = e.target.closest(".delete-ib-btn");
+  if (deleteBtn) {
+    if (!confirm("Supprimer ce message ?")) return;
+    const wrapper = deleteBtn.closest(".message-wrapper-ib");
+    const msgId = wrapper.dataset.id;
+    await fetch(`/api/messages/${msgId}/delete`, { method: "POST" });
+    return;
+  }
+
+  // Translate
+  const translateBtn = e.target.closest(".translate-ib-btn");
+  if (translateBtn) {
+    const wrapper = translateBtn.closest(".message-wrapper-ib");
+    const textEl = wrapper.querySelector(".message-text");
+    if (!textEl) return;
+    const transDiv = wrapper.querySelector(".translation-result");
+    if (transDiv.style.display === "block") { transDiv.style.display = "none"; return; }
+    transDiv.textContent = "Traduction en cours…"; transDiv.style.display = "block";
+    const res = await fetch("/api/ai/translate", {
+      method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ text: textEl.innerText })
+    });
+    const data = await res.json();
+    transDiv.textContent = data.translation || data.error || "Erreur";
+    return;
+  }
+
+  // Close pickers
+  if (!e.target.closest(".emoji-picker-ib") && !e.target.closest(".react-ib-btn")) {
+    document.querySelectorAll(".emoji-picker-ib.active").forEach(p => p.classList.remove("active"));
+  }
+});
+
+cancelReply.addEventListener("click", cancelReplyAction);
+function cancelReplyAction() { replyingTo = null; replyPreview.style.display = "none"; }
+
+// =============================================
+// APPEND MESSAGE
+// =============================================
+function appendIbMessage(data, isSent) {
+  const wrapper = document.createElement("div");
+  wrapper.className = `message-wrapper-ib ${isSent ? "sent-wrapper" : "received-wrapper"}`;
+  wrapper.dataset.id = data._id;
+  let html = "";
+
+  if (data.audio) {
+    let dur = "0:00";
+    if (data.duration) { const m=Math.floor(data.duration/60),s=String(Math.floor(data.duration%60)).padStart(2,'0'); dur=m+":"+s; }
+    html = `<div class="message-bubble audio ${isSent?"sent":"received"}" data-audio="${data.audio}">
+      <div class="audio-wrapper">
+        <button class="play-btn"><i class="fa-solid fa-play"></i></button>
+        <div class="waveform"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <span class="duration">${dur}</span>
+      </div>
+      <audio class="audio-player" src="${data.audio}" preload="metadata"></audio>
+      ${isSent?'<span class="message-status"><i class="fa-solid fa-check"></i></span>':""}
+    </div>`;
+  } else if (data.image) {
+    const isSticker = data.isSticker;
+    html = `<div class="message-bubble img-bubble ${isSent?"sent":"received"} ${isSticker?"sticker-bubble":""}">
+      <div class="message-image">
+        <img src="${data.image}" alt="Photo" class="${isSticker?"sticker-img":"chat-img"}">
+        ${!isSticker?`<a href="${data.image}" download class="img-download-btn" title="Télécharger"><i class="fa-solid fa-download"></i></a>`:""}
+      </div>
+      ${isSent?'<span class="message-status"><i class="fa-solid fa-check"></i></span>':""}
+    </div>`;
+  } else {
+    const isBurn = data.expiresAt;
+    let replyHtml = "";
+    if (data.repondA) {
+      const rc = typeof data.repondA === "object" ? (data.repondA.image ? "[Image]" : (data.repondA.contenu||"").slice(0,50)) : "";
+      replyHtml = `<div class="reply-quote"><i class="fa-solid fa-reply"></i> ${esc(rc)}</div>`;
+    }
+    html = `<div class="message-bubble ${isSent?"sent":"received"} ${isBurn?"burn-msg":""}">
+      ${replyHtml}
+      <span class="message-text">${esc(data.contenu||"")}</span>
+      ${isBurn?`<div class="burn-timer" data-expires="${data.expiresAt}">⏳ …</div>`:""}
+      ${isSent?'<span class="message-status"><i class="fa-solid fa-check"></i></span>':""}
+    </div>`;
+  }
+
+  html += `<div class="msg-toolbar-ib">
+    <button class="tb-btn reply-ib-btn" title="Répondre"><i class="fa-solid fa-reply"></i></button>
+    <button class="tb-btn react-ib-btn" title="Réagir"><i class="fa-regular fa-face-smile"></i></button>
+    ${!isSent?'<button class="tb-btn translate-ib-btn" title="Traduire"><i class="fa-solid fa-language"></i></button>':""}
+    ${isSent?'<button class="tb-btn delete-ib-btn" title="Supprimer"><i class="fa-solid fa-trash"></i></button>':""}
+  </div>
+  <div class="emoji-picker-ib"><span data-emoji="👍">👍</span><span data-emoji="❤️">❤️</span><span data-emoji="😂">😂</span><span data-emoji="😮">😮</span><span data-emoji="😢">😢</span><span data-emoji="🔥">🔥</span></div>
+  <div class="message-reactions-ib"></div>
+  <div class="translation-result" style="display:none;"></div>`;
+
+  wrapper.innerHTML = html;
+  chatMessages.appendChild(wrapper);
+
+  // Burn timer
+  if (data.expiresAt) startBurnTimer(wrapper.querySelector(".burn-timer"), data.expiresAt);
+}
+
+// =============================================
+// BURN TIMER
+// =============================================
+function startBurnTimer(el, expiresAt) {
+  if (!el) return;
+  const interval = setInterval(() => {
+    const remaining = Math.max(0, Math.floor((new Date(expiresAt) - Date.now()) / 1000));
+    el.textContent = `🔥 ${remaining}s`;
+    if (remaining <= 0) clearInterval(interval);
+  }, 1000);
+}
+// Init existing burn timers
+document.querySelectorAll(".burn-timer").forEach(el => {
+  const expires = el.dataset.expires;
+  if (expires) startBurnTimer(el, expires);
+});
+
+// =============================================
+// AUDIO PLAYER
+// =============================================
+function playAudio(element) {
+  if (!element) return;
+  const player = element.querySelector(".audio-player");
+  const btn = element.querySelector(".play-btn i");
+  if (!player) return;
+  if (player.paused) {
+    document.querySelectorAll(".audio-player").forEach(a => { if (a!==player){a.pause();a.currentTime=0;const p=a.closest(".message-bubble.audio");if(p){p.classList.remove("playing");const b=p.querySelector(".play-btn i");if(b)b.className="fa-solid fa-play";}} });
+    player.play(); element.classList.add("playing"); if(btn)btn.className="fa-solid fa-pause";
+  } else { player.pause(); element.classList.remove("playing"); if(btn)btn.className="fa-solid fa-play"; }
+  player.onended = () => { element.classList.remove("playing"); if(btn)btn.className="fa-solid fa-play"; };
+}
+document.querySelectorAll(".message-bubble.audio .audio-player").forEach(a => {
+  a.onloadedmetadata = function() {
+    const el = a.closest(".message-bubble.audio")?.querySelector(".duration");
+    if (el && a.duration && !isNaN(a.duration)) { const m=Math.floor(a.duration/60),s=String(Math.floor(a.duration%60)).padStart(2,'0'); el.textContent=m+":"+s; }
+  };
+});
+
+function esc(str) { const d=document.createElement("div"); d.innerText=str||""; return d.innerHTML; }
+
+socket.emit("mark-read", { from: otherUserId, to: currentUserId });
+chatMessages.scrollTop = chatMessages.scrollHeight;
+</script>
+</body>
+</html>

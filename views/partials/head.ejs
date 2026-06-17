@@ -1,0 +1,22 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= title %> — SocialApp</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/style.css">
+<!-- Préchargement du son pour les notifications -->
+<audio id="notificationSound" preload="auto" style="display:none;">
+    <source src="/sounds/Sale-notification-chime-sound-effect.mp3" type="audio/mpeg">
+</audio>
+<script src="/js/main.js" defer></script>
+<!-- Thème dynamique -->
+<script>
+(function() {
+    var theme = '<%= locals.userTheme || (locals.user && locals.user.theme) || "default" %>';
+    if (theme && theme !== 'default') {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.setAttribute('data-theme', theme);
+        });
+    }
+})();
+</script>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body>
+    <%- include('partials/navbar', { currentPage: 'feed' }) %>
+
+    <div class="main-container">
+        <%- include('partials/sidebar', { currentPage: 'feed' }) %>
+
+        <main class="feed">
+
+            <div class="page-header">
+                <div>
+                    <h1>Fil d'actualité</h1>
+                    <div class="subtitle">Découvre les dernières publications de tes amis</div>
+                </div>
+            </div>
+
+            <% if (error && error.length > 0) { %>
+                <div class="alert alert-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><%= error[0] %></span>
+                </div>
+            <% } %>
+
+            <!-- Formulaire de publication -->
+            <div class="card post-form">
+                <form action="/post" method="POST" enctype="multipart/form-data">
+                    <div class="post-form-top">
+                        <img src="<%= user.photoProfil %>" class="post-form-avatar" alt="">
+                        <textarea name="contenu" placeholder="Quoi de neuf, <%= user.nom.split(' ')[0] %> ?" required></textarea>
+                    </div>
+                    <div id="imagePreview" style="margin:0 0 10px 56px;"></div>
+                    <div class="post-form-footer">
+                        <div class="post-form-tools">
+                            <label for="imageInput" title="Ajouter une image">
+                                <i class="fa-solid fa-image"></i>
+                            </label>
+                            <input type="file" id="imageInput" name="image" accept="image/*" style="display:none">
+                        </div>
+                        <button type="submit" class="btn">
+                            <i class="fa-solid fa-paper-plane"></i> Publier
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Liste des posts -->
+            <% if (posts.length === 0) { %>
+                <div class="card empty-state">
+                    <i class="fa-solid fa-newspaper"></i>
+                    <p>Aucune publication pour le moment.</p>
+                    <p>Commence par publier ou ajoute des amis !</p>
+                </div>
+            <% } %>
+
+            <% posts.forEach(post => { %>
+                <div class="card post">
+                    <div class="post-header">
+                        <img src="<%= post.auteur.photoProfil %>" class="post-avatar" alt="">
+                        <div>
+                            <div class="post-author">
+                                <%= post.auteur.nom %>
+                                <%- include('partials/badges', { badges: post.auteur.badges }) %>
+                            </div>
+                            <div class="post-date">
+                                <%= new Date(post.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="post-content"><%= post.contenu %></div>
+
+                    <% if (post.image) { %>
+                        <img src="<%= post.image %>" class="post-image" alt="">
+                    <% } %>
+
+                    <div class="post-actions">
+                        <button class="like-btn <%= post.likes.some(id => id.toString() === currentUserId) ? 'liked' : '' %>"
+                                data-id="<%= post._id %>">
+                            <i class="fa-solid fa-thumbs-up"></i>
+                            <span class="likes-count"><%= post.likes.length %></span> J'aime
+                        </button>
+
+                        <button onclick="toggleComments('<%= post._id %>')">
+                            <i class="fa-solid fa-comment"></i>
+                            <span class="comments-count"><%= post.commentaires.length %></span> Commentaires
+                        </button>
+
+                        <% if (post.auteur._id.toString() === currentUserId) { %>
+                            <form action="/post/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Supprimer ce post ?')">
+                                <button type="submit">
+                                    <i class="fa-solid fa-trash"></i>
+                                    Supprimer
+                                </button>
+                            </form>
+                        <% } %>
+                    </div>
+
+                    <div class="comments-section" id="comments-<%= post._id %>" style="display:none;">
+                        <div class="comments-list">
+                            <% post.commentaires.forEach(comment => { %>
+                                <div class="comment">
+                                    <img src="<%= comment.auteur.photoProfil %>" class="comment-avatar" alt="">
+                                    <div class="comment-bubble">
+                                        <div class="comment-author">
+                                            <%= comment.auteur.nom %>
+                                            <%- include('partials/badges', { badges: comment.auteur.badges }) %>
+                                        </div>
+                                        <div><%= comment.texte %></div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+
+                        <form class="comment-form ajax-comment-form" data-id="<%= post._id %>">
+                            <input type="text" name="texte" placeholder="Écrire un commentaire..." required>
+                            <button type="submit">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% }) %>
+
+        </main>
+
+        <aside class="right-sidebar">
+            <h3 style="margin-bottom:12px; font-size:14px; color:var(--text-secondary);">À PROPOS</h3>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                Bienvenue sur <strong>SocialApp</strong> 🚀<br>
+                Partage, connecte et discute avec tes amis !
+            </p>
+        </aside>
+    </div>
+
+    <script src="/js/feed.js"></script>
+    <script>
+        function toggleComments(postId) {
+            const el = document.getElementById('comments-' + postId)
+            el.style.display = el.style.display === 'none' ? 'block' : 'none'
+        }
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const preview = document.getElementById('imagePreview')
+            preview.innerHTML = ''
+            const file = e.target.files[0]
+            if (file) {
+                const img = document.createElement('img')
+                img.src = URL.createObjectURL(file)
+                img.style.maxWidth = '100%'
+                img.style.borderRadius = '10px'
+                img.style.maxHeight = '300px'
+                preview.appendChild(img)
+            }
+        })
+    </script>
+</body>
+</html>
