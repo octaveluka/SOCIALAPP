@@ -12,11 +12,13 @@ router.get("/", requireAuth, async (req, res) => {
         const currentUser = await User.findById(req.session.user.id)
 
         // Récupère tous les posts, triés du plus récent au plus ancien
-        const posts = await Post.find()
+        const rawPosts = await Post.find()
             .populate("auteur", "nom photoProfil badges")
             .populate("commentaires.auteur", "nom photoProfil badges")
             .sort({ createdAt: -1 })
             .limit(50)
+        // Filtrer les posts dont l'auteur a été supprimé
+        const posts = rawPosts.filter(p => p.auteur != null)
 
         const demandesCount = currentUser.demandesRecues.length
 

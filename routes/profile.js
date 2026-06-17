@@ -17,10 +17,11 @@ router.get("/profile/:id", requireAuth, async (req, res) => {
 
         const currentUser = await User.findById(req.session.user.id)
 
-        const posts = await Post.find({ auteur: profileUser._id })
+        const rawPosts = await Post.find({ auteur: profileUser._id })
             .populate("auteur", "nom photoProfil badges")
             .populate("commentaires.auteur", "nom photoProfil badges")
             .sort({ createdAt: -1 })
+        const posts = rawPosts.filter(p => p.auteur != null)
 
         const isOwnProfile = profileUser._id.toString() === currentUser._id.toString()
         const isFriend = currentUser.amis.some(id => id.toString() === profileUser._id.toString())
