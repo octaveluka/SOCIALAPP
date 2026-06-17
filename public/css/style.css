@@ -2821,10 +2821,32 @@ body[data-theme="forest"] {
     padding: 4px !important;
 }
 .sticker-img {
-    width: 120px !important;
-    height: 120px !important;
+    width: 100px !important;
+    height: 100px !important;
     object-fit: contain;
     border-radius: 12px;
+}
+
+/* === IMAGE CHAT (FB Messenger style) === */
+.message-bubble.img-bubble {
+    padding: 3px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 220px;
+}
+.message-bubble.img-bubble.sent { background: transparent !important; }
+.message-bubble.img-bubble.received { background: transparent !important; }
+
+.chat-img {
+    display: block;
+    max-width: 210px;
+    max-height: 230px;
+    width: auto;
+    height: auto;
+    border-radius: 14px;
+    object-fit: cover;
+    cursor: pointer;
 }
 
 /* === IMAGE DOWNLOAD BUTTON === */
@@ -2832,7 +2854,7 @@ body[data-theme="forest"] {
 .img-download-btn {
     position: absolute;
     bottom: 6px; right: 6px;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.55);
     color: white;
     border-radius: 8px;
     padding: 4px 8px;
@@ -2989,16 +3011,8 @@ body[data-theme="forest"] {
     border-bottom: 1px solid var(--border);
 }
 
-/* === FOCUS SIDE PANEL === */
-.focus-side-panel {
-    width: 380px;
-    min-width: 280px;
-    background: var(--card-bg);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    transition: var(--transition);
-}
+/* === FOCUS SIDE PANEL (supprimé) === */
+.focus-side-panel { display: none !important; }
 .focus-panel-header {
     display: flex;
     align-items: center;
@@ -3008,7 +3022,6 @@ body[data-theme="forest"] {
     font-weight: 600;
     font-size: 14px;
 }
-@media (max-width: 900px) { .focus-side-panel { display: none !important; } }
 
 /* === SUBPROFILE PANEL === */
 .subprofile-panel {

@@ -178,7 +178,7 @@ io.on("connection", async (socket) => {
             const textContent = type === 'text' ? contenu.trim() : ''
 
             // Vérifier commandes IA dans les messages privés
-            if (type === 'text' && textContent.match(/^\/([\+imagine|edit|summary|sticker|find|burn|send|roll])/)) {
+            if (type === 'text' && textContent.match(/^\/(\+|imagine|edit|summary|sticker|find|burn|send|roll)/)) {
                 const cmdResult = await dispatchCommand(textContent, from, { destinataireId: to, replyToId: replyTo || null })
                 if (cmdResult && !cmdResult.error) {
                     const msgData = {

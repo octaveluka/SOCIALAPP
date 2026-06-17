@@ -11,15 +11,13 @@
     <div class="chat-header">
       <a href="/messages" class="chat-back"><i class="fa-solid fa-arrow-left"></i></a>
       <img src="<%= group.photo %>" alt="" id="groupHeaderPhoto">
-      <div>
-        <div><%= group.nom %></div>
+      <div style="flex:1;min-width:0;overflow:hidden;">
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:15px;"><%= group.nom %></div>
         <div style="font-size:11px;font-weight:400;color:var(--text-secondary);"><%= group.membres.length %> membre(s)</div>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <div style="flex-shrink:0;display:flex;gap:6px;align-items:center;">
         <!-- Voice Room -->
         <button id="voiceRoomBtn" title="Salon vocal" class="chat-icon-btn" style="color:var(--text-secondary);"><i class="fa-solid fa-microphone-lines"></i></button>
-        <!-- Focus Mode -->
-        <button id="focusBtn" title="Mode Focus" class="chat-icon-btn" style="color:var(--text-secondary);"><i class="fa-solid fa-columns"></i></button>
         <!-- Watch Party -->
         <button id="watchPartyBtn" title="Watch Party" class="chat-icon-btn" style="color:var(--text-secondary);"><i class="fa-solid fa-film"></i></button>
         <!-- SubProfile -->
@@ -111,7 +109,7 @@
               <audio class="audio-player" src="<%= msg.audio %>" preload="metadata"></audio>
             </div>
           <% } else if (msg.image) { %>
-            <div class="message-bubble <%= isOwn ? 'sent' : 'received' %> <%= msg.isSticker ? 'sticker-bubble' : '' %>">
+            <div class="message-bubble <%= msg.isSticker ? 'sticker-bubble' : 'img-bubble' %> <%= isOwn ? 'sent' : 'received' %>">
               <% if (msg.repondA && msg.repondA.contenu) { %>
                 <div class="reply-quote"><i class="fa-solid fa-reply"></i> <%= (msg.repondA.contenu||'').slice(0,50) %></div>
               <% } %>
@@ -190,14 +188,6 @@
     <div class="mention-list" id="mentionList" style="display:none;"></div>
   </div>
 
-  <!-- FOCUS SIDE PANEL (outside chat container) -->
-  <div id="focusSidePanel" class="focus-side-panel" style="display:none;">
-    <div class="focus-panel-header">
-      <span>📝 Éditeur Focus</span>
-      <button id="closeFocusSide" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button>
-    </div>
-    <textarea id="focusSideEditor" placeholder="Zone de travail collaboratif…" style="flex:1;width:100%;padding:12px;border:none;resize:none;font-family:monospace;font-size:13px;background:var(--card-bg);outline:none;"></textarea>
-  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -472,32 +462,6 @@ socket.on("watch-party-sync",data=>{
   if(data.action==="seek") watchVideo.currentTime=data.currentTime;
 });
 
-// =============================================
-// FOCUS MODE
-// =============================================
-document.getElementById("focusBtn").addEventListener("click",()=>{
-  isFocusMode=!isFocusMode;
-  const p=document.getElementById("focusSidePanel");
-  p.style.display=isFocusMode?"flex":"none";
-  chatPageContainer.style.maxWidth=isFocusMode?"55%":"";
-  document.getElementById("focusBtn").style.color=isFocusMode?"var(--primary)":"var(--text-secondary)";
-});
-document.getElementById("closeFocusSide").addEventListener("click",()=>{
-  isFocusMode=false;
-  document.getElementById("focusSidePanel").style.display="none";
-  chatPageContainer.style.maxWidth="";
-  document.getElementById("focusBtn").style.color="var(--text-secondary)";
-});
-let focusDebounce;
-document.getElementById("focusSideEditor").addEventListener("input",function(){
-  clearTimeout(focusDebounce);
-  focusDebounce=setTimeout(()=>socket.emit("focus-update",{groupId,content:this.value}),300);
-});
-socket.on("focus-update",data=>{
-  if(data.from===currentUserId) return;
-  const editor=document.getElementById("focusSideEditor");
-  const pos=editor.selectionStart;editor.value=data.content;editor.setSelectionRange(pos,pos);
-});
 
 // =============================================
 // SUBPROFILES
@@ -628,7 +592,7 @@ function appendGroupMessage(data,isTemp=false){
 
   if(data.image){
     const isSticker=data.isSticker;
-    html+=`<div class="message-bubble ${isOwn?"sent":"received"} ${isSticker?"sticker-bubble":""}">
+    html+=`<div class="message-bubble ${isSticker?"sticker-bubble":"img-bubble"} ${isOwn?"sent":"received"}">
       <div class="message-image">
         <img src="${data.image}" alt="" class="${isSticker?"sticker-img":"chat-img"}">
         ${!isSticker?`<a href="${data.image}" download class="img-download-btn" title="Télécharger"><i class="fa-solid fa-download"></i></a>`:""}
