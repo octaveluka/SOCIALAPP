@@ -107,17 +107,17 @@ router.get("/groups/:id", requireAuth, async (req, res) => {
         }
 
         const currentUserId = req.session.user.id
-        const currentUserRole = req.session.user.role
-        const isSiteAdmin = currentUserRole === "admin"
 
-        let membre = group.membres.find(m => m.user._id.toString() === currentUserId)
+        // Toujours lire le rôle depuis la DB (pas la session) pour éviter staleness
+        const currentUserFromDb = await User.findById(currentUserId, "role nom photoProfil")
+        const isSiteAdmin = currentUserFromDb?.role === "admin"
+
+        let membre = group.membres.find(m => m.user && m.user._id && m.user._id.toString() === currentUserId)
 
         // Les admins du site peuvent accéder à tous les groupes
         if (!membre && isSiteAdmin) {
-            group.membres.push({ user: { _id: currentUserId, nom: req.session.user.nom || "Admin", photoProfil: req.session.user.photoProfil || "", enLigne: true, badges: [] }, isAdmin: true, pseudo: null })
-            membre = group.membres[group.membres.length - 1]
-            // Sauvegarder en DB
             await Group.findByIdAndUpdate(group._id, { $push: { membres: { user: currentUserId, isAdmin: true } } })
+            membre = { user: { _id: currentUserId }, isAdmin: true }
         }
 
         if (!membre) {
@@ -147,6 +147,7 @@ router.get("/groups/:id", requireAuth, async (req, res) => {
             messages,
             currentUserId,
             isAdmin,
+            isSiteAdmin,
             pseudoMap
         })
     } catch (err) {

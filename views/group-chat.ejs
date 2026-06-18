@@ -56,19 +56,42 @@
 
     <!-- WATCH PARTY PANEL -->
     <div id="watchPartyPanel" class="watch-party-panel" style="display:none;">
-      <div class="watch-party-header">
-        <span>🎬 Watch Party</span>
-        <button id="closeWatchBtn" style="background:none;border:none;cursor:pointer;font-size:16px;">✕</button>
+      <div class="watch-party-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);">
+        <span style="font-weight:700;font-size:14px;">🎬 Watch Party</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <!-- Mode toggle -->
+          <div style="display:flex;background:rgba(0,0,0,0.3);border-radius:20px;overflow:hidden;">
+            <button id="watchModeSolo" class="watch-mode-btn active" data-mode="solo" style="padding:4px 12px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:#8b5cf6;color:#fff;border-radius:20px;transition:all 0.2s;">👤 Solo</button>
+            <button id="watchModeSync" class="watch-mode-btn" data-mode="sync" style="padding:4px 12px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,0.7);border-radius:20px;transition:all 0.2s;">👥 Groupe</button>
+          </div>
+          <button id="closeWatchBtn" style="background:none;border:none;cursor:pointer;font-size:16px;color:inherit;line-height:1;">✕</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;padding:8px;">
-        <input type="text" id="watchUrlInput" placeholder="URL YouTube, MP4, Twitch…" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
-        <button id="watchLoadBtn" class="btn-primary-action" style="padding:8px 16px;">Charger</button>
+      <!-- Inputs -->
+      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="watchUrlInput" placeholder="Colle un lien YouTube, Twitch ou MP4…" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:rgba(255,255,255,0.1);color:#fff;outline:none;">
+          <button id="watchLoadBtn" style="padding:8px 14px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Charger</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.5);">ou</span>
+          <label id="watchUploadLabel" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;color:rgba(255,255,255,0.8);">
+            <i class="fa-solid fa-upload" style="font-size:11px;"></i> Uploader une vidéo
+            <input type="file" id="watchFileInput" accept="video/*" style="display:none;">
+          </label>
+          <span id="watchFileName" style="font-size:11px;color:rgba(255,255,255,0.6);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </div>
+        <div id="watchSyncWarning" style="display:none;font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:5px 8px;">
+          ⚠️ Les fichiers locaux ne peuvent pas être synchronisés avec le groupe. Mode Solo activé automatiquement.
+        </div>
       </div>
-      <div id="watchPlayerContainer" style="width:100%;background:#000;display:none;position:relative;">
-        <iframe id="watchIframe" style="width:100%;height:250px;border:none;display:none;" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-        <video id="watchVideo" controls style="width:100%;max-height:250px;background:#000;display:none;"></video>
+      <!-- Player -->
+      <div id="watchPlayerContainer" style="width:100%;background:#000;display:none;">
+        <iframe id="watchIframe" style="width:100%;height:260px;border:none;display:none;" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+        <video id="watchVideo" controls style="width:100%;max-height:260px;background:#000;display:none;"></video>
       </div>
-      <div id="watchPartyStatus" style="font-size:11px;color:var(--text-secondary);padding:4px 8px;display:none;"></div>
+      <!-- Status -->
+      <div id="watchPartyStatus" style="font-size:11px;color:rgba(255,255,255,0.7);padding:6px 12px;display:none;text-align:center;border-top:1px solid rgba(255,255,255,0.1);"></div>
     </div>
 
     <!-- SUBPROFILE PANEL -->
@@ -89,11 +112,11 @@
           <h3>🏆 Tâches Journalières</h3>
           <p>Accomplis des missions pour gagner des crédits • Se renouvèle chaque jour à minuit</p>
         </div>
-        <% if (isAdmin) { %>
+        <% if (isAdmin || isSiteAdmin) { %>
         <button id="createPrimeBtnGroup" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;">+ Créer prime</button>
         <% } %>
       </div>
-      <% if (isAdmin) { %>
+      <% if (isAdmin || isSiteAdmin) { %>
       <div id="adminBountyForm" style="display:none;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
         <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">💰 Nouvelle prime dans ce groupe</h4>
         <select id="adminActionType" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:8px;">
@@ -531,75 +554,162 @@ async function initiateCall(peerId){
 // =============================================
 // WATCH PARTY
 // =============================================
+let watchMode = "solo"; // "solo" | "sync"
+let watchBlobUrl = null; // référence au blob URL local pour pouvoir le révoquer
+
+// === Mode toggle ===
+document.querySelectorAll(".watch-mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    watchMode = btn.dataset.mode;
+    document.querySelectorAll(".watch-mode-btn").forEach(b => {
+      const active = b.dataset.mode === watchMode;
+      b.style.background = active ? "#8b5cf6" : "transparent";
+      b.style.color = active ? "#fff" : "rgba(255,255,255,0.7)";
+    });
+    document.getElementById("watchPartyStatus").textContent =
+      watchMode === "sync" ? "👥 Mode Groupe — les membres seront synchronisés" : "👤 Mode Solo — lecture personnelle uniquement";
+    document.getElementById("watchPartyStatus").style.display = "block";
+  });
+});
+
+// === Utilitaire : convertir URL en embed ===
 function getYoutubeEmbedUrl(url) {
   try {
     const u = new URL(url);
-    let videoId = null;
     if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
-      if (u.hostname === "youtu.be") videoId = u.pathname.slice(1);
-      else videoId = u.searchParams.get("v") || (u.pathname.startsWith("/embed/") ? u.pathname.split("/embed/")[1] : null);
+      let videoId = u.hostname === "youtu.be" ? u.pathname.slice(1) : (u.searchParams.get("v") || (u.pathname.startsWith("/embed/") ? u.pathname.split("/embed/")[1] : null));
       if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
     }
     if (u.hostname.includes("twitch.tv")) {
-      const parts = u.pathname.split("/").filter(Boolean);
-      if (parts[0]) return `https://player.twitch.tv/?channel=${parts[0]}&parent=${location.hostname}&autoplay=true`;
+      const ch = u.pathname.split("/").filter(Boolean)[0];
+      if (ch) return `https://player.twitch.tv/?channel=${ch}&parent=${location.hostname}&autoplay=true`;
     }
   } catch(e) {}
   return null;
 }
 
-function loadWatchPartyUrl(url) {
+// === Charger une source dans le player ===
+function loadWatchSource(src, isLocalFile=false, syncMode=watchMode) {
   const container = document.getElementById("watchPlayerContainer");
   const iframe = document.getElementById("watchIframe");
   const video = document.getElementById("watchVideo");
   const status = document.getElementById("watchPartyStatus");
   container.style.display = "block";
-  const embedUrl = getYoutubeEmbedUrl(url);
-  if (embedUrl) {
+  const embedUrl = getYoutubeEmbedUrl(src);
+  if (embedUrl && !isLocalFile) {
     iframe.src = embedUrl;
     iframe.style.display = "block";
     video.style.display = "none";
     video.src = "";
-    if (status) { status.textContent = "▶ Vidéo YouTube/Twitch chargée — synchronisée avec le groupe"; status.style.display = "block"; }
+    status.textContent = syncMode === "sync" ? "▶ YouTube/Twitch — synchronisé avec le groupe 👥" : "▶ YouTube/Twitch — lecture solo 👤";
   } else {
-    video.src = url;
+    video.src = src;
     video.style.display = "block";
     iframe.style.display = "none";
     iframe.src = "";
     video.play().catch(()=>{});
-    if (status) { status.textContent = "▶ Vidéo directe chargée — synchronisée avec le groupe"; status.style.display = "block"; }
+    status.textContent = isLocalFile ? "▶ Fichier local — lecture solo uniquement 👤" : (syncMode === "sync" ? "▶ Vidéo MP4 — synchronisée avec le groupe 👥" : "▶ Vidéo MP4 — lecture solo 👤");
+  }
+  status.style.display = "block";
+}
+
+// === Fermer et tout nettoyer ===
+function closeWatchParty() {
+  document.getElementById("watchPartyPanel").style.display = "none";
+  const video = document.getElementById("watchVideo");
+  video.pause();
+  video.src = "";
+  document.getElementById("watchIframe").src = "";
+  document.getElementById("watchPlayerContainer").style.display = "none";
+  document.getElementById("watchPartyStatus").style.display = "none";
+  document.getElementById("watchUrlInput").value = "";
+  document.getElementById("watchFileName").textContent = "";
+  document.getElementById("watchFileInput").value = "";
+  document.getElementById("watchSyncWarning").style.display = "none";
+  if (watchBlobUrl) {
+    URL.revokeObjectURL(watchBlobUrl);
+    watchBlobUrl = null;
   }
 }
 
-document.getElementById("watchPartyBtn").addEventListener("click",()=>{
-  const p=document.getElementById("watchPartyPanel");p.style.display=p.style.display==="none"?"block":"none";
+document.getElementById("watchPartyBtn").addEventListener("click", () => {
+  const p = document.getElementById("watchPartyPanel");
+  p.style.display = p.style.display === "none" ? "block" : "none";
 });
-document.getElementById("closeWatchBtn").addEventListener("click",()=>{
-  document.getElementById("watchPartyPanel").style.display="none";
-  const video=document.getElementById("watchVideo");
-  video.pause(); video.src="";
-  document.getElementById("watchIframe").src="";
-});
-document.getElementById("watchLoadBtn").addEventListener("click",()=>{
-  const url=document.getElementById("watchUrlInput").value.trim();
-  if(!url) return;
-  loadWatchPartyUrl(url);
-  socket.emit("watch-party-sync",{groupId,action:"load",url});
-});
-const watchVideo=document.getElementById("watchVideo");
-watchVideo.addEventListener("play",()=>socket.emit("watch-party-sync",{groupId,action:"play",currentTime:watchVideo.currentTime}));
-watchVideo.addEventListener("pause",()=>socket.emit("watch-party-sync",{groupId,action:"pause",currentTime:watchVideo.currentTime}));
-watchVideo.addEventListener("seeked",()=>socket.emit("watch-party-sync",{groupId,action:"seek",currentTime:watchVideo.currentTime}));
-socket.on("watch-party-sync",data=>{
-  if(data.from===currentUserId) return;
-  if(data.url&&data.action==="load"){
-    document.getElementById("watchPartyPanel").style.display="block";
-    document.getElementById("watchUrlInput").value=data.url;
-    loadWatchPartyUrl(data.url);
+document.getElementById("closeWatchBtn").addEventListener("click", closeWatchParty);
+
+// === Charger depuis URL ===
+document.getElementById("watchLoadBtn").addEventListener("click", () => {
+  const url = document.getElementById("watchUrlInput").value.trim();
+  if (!url) return;
+  // Libérer ancien blob si existant
+  if (watchBlobUrl) { URL.revokeObjectURL(watchBlobUrl); watchBlobUrl = null; }
+  document.getElementById("watchSyncWarning").style.display = "none";
+  document.getElementById("watchFileName").textContent = "";
+  loadWatchSource(url, false, watchMode);
+  if (watchMode === "sync") {
+    socket.emit("watch-party-sync", { groupId, action: "load", url });
   }
-  if(data.action==="play"&&watchVideo.style.display!=="none"){watchVideo.currentTime=data.currentTime;watchVideo.play().catch(()=>{});}
-  if(data.action==="pause"&&watchVideo.style.display!=="none"){watchVideo.currentTime=data.currentTime;watchVideo.pause();}
-  if(data.action==="seek"&&watchVideo.style.display!=="none") watchVideo.currentTime=data.currentTime;
+});
+
+// === Upload d'un fichier local ===
+document.getElementById("watchFileInput").addEventListener("change", function() {
+  const file = this.files[0];
+  if (!file) return;
+  if (watchBlobUrl) { URL.revokeObjectURL(watchBlobUrl); watchBlobUrl = null; }
+  watchBlobUrl = URL.createObjectURL(file);
+  document.getElementById("watchFileName").textContent = file.name;
+  document.getElementById("watchUrlInput").value = "";
+  // Fichier local = toujours solo
+  if (watchMode === "sync") {
+    document.getElementById("watchSyncWarning").style.display = "block";
+  }
+  loadWatchSource(watchBlobUrl, true, "solo");
+});
+
+// === Synchronisation vidéo directe (MP4) avec le groupe ===
+const watchVideo = document.getElementById("watchVideo");
+let watchSyncEnabled = true;
+watchVideo.addEventListener("play", () => {
+  if (watchMode !== "sync" || !watchSyncEnabled || watchBlobUrl) return;
+  socket.emit("watch-party-sync", { groupId, action: "play", currentTime: watchVideo.currentTime });
+});
+watchVideo.addEventListener("pause", () => {
+  if (watchMode !== "sync" || !watchSyncEnabled || watchBlobUrl) return;
+  socket.emit("watch-party-sync", { groupId, action: "pause", currentTime: watchVideo.currentTime });
+});
+watchVideo.addEventListener("seeked", () => {
+  if (watchMode !== "sync" || watchBlobUrl) return;
+  socket.emit("watch-party-sync", { groupId, action: "seek", currentTime: watchVideo.currentTime });
+});
+
+// === Réception synchro depuis le groupe ===
+socket.on("watch-party-sync", data => {
+  if (data.from === currentUserId) return;
+  if (data.url && data.action === "load") {
+    document.getElementById("watchPartyPanel").style.display = "block";
+    document.getElementById("watchUrlInput").value = data.url;
+    loadWatchSource(data.url, false, "sync");
+  }
+  if (data.action === "play" && watchVideo.style.display !== "none") {
+    watchSyncEnabled = false;
+    watchVideo.currentTime = data.currentTime;
+    watchVideo.play().catch(()=>{}).finally(()=>{ watchSyncEnabled = true; });
+  }
+  if (data.action === "pause" && watchVideo.style.display !== "none") {
+    watchSyncEnabled = false;
+    watchVideo.currentTime = data.currentTime;
+    watchVideo.pause();
+    watchSyncEnabled = true;
+  }
+  if (data.action === "seek" && watchVideo.style.display !== "none") {
+    watchVideo.currentTime = data.currentTime;
+  }
+});
+
+// === Révoquer le blob si l'utilisateur quitte la page ===
+window.addEventListener("beforeunload", () => {
+  if (watchBlobUrl) URL.revokeObjectURL(watchBlobUrl);
 });
 
 
@@ -915,7 +1025,7 @@ async function loadBounties(){
 loadBounties();
 
 // === ADMIN : Créer une prime depuis le groupe ===
-<% if (isAdmin) { %>
+<% if (isAdmin || isSiteAdmin) { %>
 const _createBtn=document.getElementById("createPrimeBtnGroup");
 const _adminForm=document.getElementById("adminBountyForm");
 if(_createBtn&&_adminForm){
