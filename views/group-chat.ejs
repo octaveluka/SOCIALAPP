@@ -114,23 +114,12 @@
       </div>
       <% if (isAdmin || isSiteAdmin) { %>
       <div id="adminBountyForm" style="display:none;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
-        <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">💰 Nouvelle prime dans ce groupe</h4>
-        <select id="adminActionType" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:8px;">
-          <option value="">-- Choisir une action --</option>
-          <option value="like_post">👍 Liker ma dernière publication</option>
-          <option value="comment_post">💬 Commenter ma publication</option>
-          <option value="add_friend">🤝 M'envoyer une demande d'ami</option>
-          <option value="publish_post">📝 Publier une actualité aujourd'hui</option>
-          <option value="use_ai">🤖 Utiliser une commande IA</option>
-          <option value="send_5_msgs">✉️ Envoyer 5 messages dans les chats</option>
-          <option value="like_3_posts">❤️ Liker 3 publications</option>
-          <option value="write_2_cmts">✍️ Écrire 2 commentaires</option>
-          <option value="change_avatar">🖼️ Modifier sa photo de profil</option>
-          <option value="join_group">👥 Rejoindre un groupe</option>
-        </select>
-        <input type="number" id="adminRewardAmount" min="1" placeholder="Récompense (crédits)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px;box-sizing:border-box;">
+        <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">💰 Créer une offre personnalisée</h4>
+        <input type="text" id="adminCustomTitle" maxlength="80" placeholder="Titre de l'offre (ex: Partage cette publication)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:8px;box-sizing:border-box;">
+        <textarea id="adminCustomDesc" maxlength="200" rows="2" placeholder="Description optionnelle (ex: Va liker et partager la dernière publication épinglée)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:8px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>
+        <input type="number" id="adminRewardAmount" min="1" placeholder="Récompense en crédits" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px;box-sizing:border-box;">
         <div style="display:flex;gap:8px;">
-          <button id="submitAdminBounty" style="flex:1;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px;cursor:pointer;font-weight:600;font-size:13px;">Créer</button>
+          <button id="submitAdminBounty" style="flex:1;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px;cursor:pointer;font-weight:600;font-size:13px;">Publier l'offre</button>
           <button id="cancelAdminBounty" style="flex:1;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;font-size:13px;">Annuler</button>
         </div>
       </div>
@@ -140,7 +129,7 @@
           <i class="fa-solid fa-spinner fa-spin"></i> Chargement des tâches…
         </div>
       </div>
-      <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">💰 Primes Actives</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">💰 Offres & Primes (tous les membres)</div>
       <div id="bountiesContainer">
         <div style="text-align:center;padding:14px;color:var(--text-secondary);font-size:13px;">
           <i class="fa-solid fa-spinner fa-spin"></i> Chargement…
@@ -327,14 +316,24 @@ messageInput.addEventListener("input", function() {
   for (const [cmd,desc] of Object.entries(cmds)) { if (val.startsWith(cmd)){hint=desc;break;} }
   if (hint){aiHint.textContent=hint;aiHint.style.display="block";}else{aiHint.style.display="none";}
 
-  // Mentions
-  const match = val.match(/@(\w*)$/);
-  if (match) {
-    const search = match[1].toLowerCase();
-    const filtered = membres.filter(m => m.pseudo.toLowerCase().startsWith(search) && m.id !== currentUserId);
+  // Mentions — autocomplete style Facebook
+  const curPos = this.selectionStart;
+  const textBefore = val.slice(0, curPos);
+  const atMatch = textBefore.match(/@(\w*)$/);
+  if (atMatch) {
+    const search = atMatch[1].toLowerCase();
+    const filtered = membres.filter(m => m.pseudo && m.pseudo.toLowerCase().startsWith(search) && m.id !== currentUserId);
     if (filtered.length) {
-      mentionList.innerHTML = filtered.map(m => `<div class="mention-item" data-pseudo="${m.pseudo}">@${m.pseudo}</div>`).join("");
-      mentionList.style.display = "block";
+      mentionList.innerHTML = filtered.slice(0, 7).map(m => {
+        const initiale = (m.pseudo || "?")[0].toUpperCase();
+        return `<div class="mention-item" data-pseudo="${m.pseudo}" style="padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.12s;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">${initiale}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;">@${m.pseudo}</div>
+          </div>
+        </div>`;
+      }).join("");
+      mentionList.style.cssText = "display:block;position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;z-index:9999;max-height:260px;overflow-y:auto;box-shadow:0 -6px 24px rgba(0,0,0,0.2);";
     } else { mentionList.style.display = "none"; }
   } else { mentionList.style.display = "none"; }
 });
@@ -342,9 +341,32 @@ messageInput.addEventListener("input", function() {
 mentionList.addEventListener("click", e => {
   const item = e.target.closest(".mention-item"); if (!item) return;
   const pseudo = item.dataset.pseudo;
-  const before = messageInput.value.slice(0, messageInput.selectionStart).replace(/@(\w*)$/, "@" + pseudo + " ");
-  messageInput.value = before + messageInput.value.slice(messageInput.selectionStart);
-  mentionList.style.display = "none"; messageInput.focus();
+  const curPos = messageInput.selectionStart;
+  const textBefore = messageInput.value.slice(0, curPos);
+  const textAfter = messageInput.value.slice(curPos);
+  const replaced = textBefore.replace(/@(\w*)$/, "@" + pseudo + " ");
+  messageInput.value = replaced + textAfter;
+  const newPos = replaced.length;
+  mentionList.style.display = "none";
+  messageInput.focus();
+  messageInput.setSelectionRange(newPos, newPos);
+});
+
+// Hover mention items
+mentionList.addEventListener("mouseover", e => {
+  const item = e.target.closest(".mention-item"); if (!item) return;
+  mentionList.querySelectorAll(".mention-item").forEach(i => i.style.background = "transparent");
+  item.style.background = "var(--bg-secondary)";
+});
+mentionList.addEventListener("mouseleave", () => {
+  mentionList.querySelectorAll(".mention-item").forEach(i => i.style.background = "transparent");
+});
+
+// Clavier : Échap ferme la liste
+messageInput.addEventListener("keydown", e => {
+  if (e.key === "Escape" && mentionList.style.display !== "none") {
+    mentionList.style.display = "none"; e.stopPropagation();
+  }
 });
 
 // =============================================
@@ -553,12 +575,15 @@ async function initiateCall(peerId){
 let watchBlobUrl = null;
 
 // === Utilitaire : convertir URL en embed ===
-function getYoutubeEmbedUrl(url) {
+function getYoutubeEmbedUrl(url, startSeconds = 0) {
   try {
     const u = new URL(url);
     if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
       let videoId = u.hostname === "youtu.be" ? u.pathname.slice(1) : (u.searchParams.get("v") || (u.pathname.startsWith("/embed/") ? u.pathname.split("/embed/")[1] : null));
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+      if (videoId) {
+        const start = startSeconds > 3 ? `&start=${Math.floor(startSeconds)}` : "";
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1${start}`;
+      }
     }
     if (u.hostname.includes("twitch.tv")) {
       const ch = u.pathname.split("/").filter(Boolean)[0];
@@ -569,13 +594,13 @@ function getYoutubeEmbedUrl(url) {
 }
 
 // === Charger une source dans le player ===
-function loadWatchSource(src, isLocalFile=false) {
+function loadWatchSource(src, isLocalFile=false, startTime=0) {
   const container = document.getElementById("watchPlayerContainer");
   const iframe = document.getElementById("watchIframe");
   const video = document.getElementById("watchVideo");
   const status = document.getElementById("watchPartyStatus");
   container.style.display = "block";
-  const embedUrl = getYoutubeEmbedUrl(src);
+  const embedUrl = getYoutubeEmbedUrl(src, startTime);
   if (embedUrl && !isLocalFile) {
     iframe.src = embedUrl;
     iframe.style.display = "block";
@@ -587,6 +612,9 @@ function loadWatchSource(src, isLocalFile=false) {
     video.style.display = "block";
     iframe.style.display = "none";
     iframe.src = "";
+    if (startTime > 3) {
+      video.addEventListener("loadedmetadata", () => { video.currentTime = startTime; }, { once: true });
+    }
     video.play().catch(()=>{});
     status.textContent = isLocalFile ? "▶ Fichier local — visible uniquement pour toi" : "📡 Vidéo MP4 — en direct avec tout le groupe";
   }
@@ -665,12 +693,8 @@ socket.on("watch-party-sync", data => {
   if (data.url && data.action === "load") {
     document.getElementById("watchPartyPanel").style.display = "block";
     document.getElementById("watchUrlInput").value = data.url;
-    loadWatchSource(data.url, false);
-    if (data.currentTime && data.currentTime > 2) {
-      watchSyncEnabled = false;
-      watchVideo.currentTime = data.currentTime;
-      setTimeout(() => { watchSyncEnabled = true; }, 1000);
-    }
+    const startAt = (data.currentTime && data.currentTime > 3) ? data.currentTime : 0;
+    loadWatchSource(data.url, false, startAt);
   }
   if (data.action === "play" && watchVideo.style.display !== "none") {
     watchSyncEnabled = false;
@@ -978,15 +1002,18 @@ async function loadBounties(){
     data.bounties.forEach(b=>{
       const div=document.createElement("div");
       div.className="bounty-mini-card";
+      const isAdmin=b.actionType==="custom_admin";
+      const creatorLabel=isAdmin?`<span style="background:rgba(139,92,246,0.15);color:#8b5cf6;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;">ADMIN</span>`:"";
       div.innerHTML=`
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
-          <span style="font-size:12px;font-weight:700;color:var(--text-primary);">${b.title}</span>
-          <span style="font-size:12px;font-weight:700;color:#f59e0b;">💰 ${b.rewardAmount}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text-primary);">${b.title}${creatorLabel}</span>
+          <span style="font-size:12px;font-weight:700;color:#f59e0b;white-space:nowrap;">💰 ${b.rewardAmount}</span>
         </div>
-        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">Par ${b.creatorNom} • ${b.applicantsCount} candidat(s)</div>
+        ${b.description?`<div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">${b.description}</div>`:""}
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">Par <strong>${b.creatorNom}</strong> • ${b.applicantsCount} candidat(s)</div>
         ${!b.isOwn&&!b.alreadyApplied
           ?`<button class="btn-accomplish-mini" data-id="${b._id}" style="width:100%;padding:6px;border:none;border-radius:6px;background:var(--primary);color:#fff;cursor:pointer;font-size:12px;font-weight:600;">⚡ Accomplir</button>`
-          :b.alreadyApplied?'<span style="font-size:11px;color:#10b981;font-weight:600;">✅ Déjà accompli</span>':''
+          :b.alreadyApplied?'<span style="font-size:11px;color:#10b981;font-weight:600;">✅ Accompli</span>':b.isOwn?'<span style="font-size:11px;color:var(--text-secondary);">Ton offre</span>':''
         }`;
       c.appendChild(div);
     });
@@ -1015,19 +1042,20 @@ if(_createBtn&&_adminForm){
   });
   document.getElementById("cancelAdminBounty").addEventListener("click",()=>{_adminForm.style.display="none";});
   document.getElementById("submitAdminBounty").addEventListener("click",async()=>{
-    const actionType=document.getElementById("adminActionType").value;
+    const customTitle=(document.getElementById("adminCustomTitle").value||"").trim();
+    const customDescription=(document.getElementById("adminCustomDesc").value||"").trim();
     const rewardAmount=parseInt(document.getElementById("adminRewardAmount").value);
-    if(!actionType)return alert("Choisis une action.");
+    if(!customTitle)return alert("Le titre de l'offre est obligatoire.");
     if(!rewardAmount||rewardAmount<1)return alert("Montant invalide.");
     const sbtn=document.getElementById("submitAdminBounty");
-    sbtn.disabled=true;sbtn.textContent="Création…";
+    sbtn.disabled=true;sbtn.textContent="Publication…";
     try{
-      const r=await fetch("/api/bounties",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({actionType,rewardAmount}),credentials:"same-origin"});
+      const r=await fetch("/api/bounties",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customTitle,customDescription,rewardAmount}),credentials:"same-origin"});
       const d=await r.json();
-      sbtn.disabled=false;sbtn.textContent="Créer";
-      if(d.success){_adminForm.style.display="none";document.getElementById("adminActionType").value="";document.getElementById("adminRewardAmount").value="";loadBounties();}
+      sbtn.disabled=false;sbtn.textContent="Publier l'offre";
+      if(d.success){_adminForm.style.display="none";document.getElementById("adminCustomTitle").value="";document.getElementById("adminCustomDesc").value="";document.getElementById("adminRewardAmount").value="";loadBounties();}
       else{alert(d.error);}
-    }catch(e){sbtn.disabled=false;sbtn.textContent="Créer";}
+    }catch(e){sbtn.disabled=false;sbtn.textContent="Publier l'offre";}
   });
 }
 <% } %>

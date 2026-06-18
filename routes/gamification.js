@@ -225,12 +225,27 @@ router.get("/bounties", requireAuth, async (req, res) => {
 // Créer une prime
 router.post("/api/bounties", requireAuth, async (req, res) => {
     try {
-        const { actionType, rewardAmount } = req.body
+        const { actionType, customTitle, customDescription, rewardAmount } = req.body
         const user = await User.findById(req.session.user.id)
-        const action = BOUNTY_ACTION_TYPES.find(a => a.id === actionType)
-        if (!action) return res.status(400).json({ error: "Type d'action invalide." })
         const amount = parseInt(rewardAmount)
         if (!amount || amount < 1) return res.status(400).json({ error: "Montant minimum : 1 crédit." })
+
+        let title, description, bountyActionType
+
+        if (customTitle && user.role === "admin") {
+            // Offre personnalisée par l'admin
+            title = customTitle.trim().slice(0, 80)
+            description = (customDescription || "").trim().slice(0, 200)
+            bountyActionType = "custom_admin"
+        } else {
+            // Type prédéfini (depuis page /bounties)
+            const action = BOUNTY_ACTION_TYPES.find(a => a.id === actionType)
+            if (!action) return res.status(400).json({ error: "Type d'action invalide." })
+            title = action.label
+            description = action.desc
+            bountyActionType = actionType
+        }
+
         if (user.role !== "admin" && user.walletBalance < amount) {
             return res.status(402).json({ error: `Solde insuffisant (${user.walletBalance} crédits).` })
         }
@@ -239,9 +254,9 @@ router.post("/api/bounties", requireAuth, async (req, res) => {
             await user.save()
         }
         const bounty = await Bounty.create({
-            title: action.label,
-            description: action.desc,
-            actionType,
+            title,
+            description,
+            actionType: bountyActionType,
             rewardAmount: amount,
             createdBy: user._id
         })
