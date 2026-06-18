@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema({
     walletBalance: { type: Number, default: 0 },
     theme: { type: String, default: "default", enum: ["default", "dark", "neon", "ocean", "sunset", "forest"] },
 
+    // === CLONE IA ===
+    aiCloneActive: { type: Boolean, default: false },
+
     // === SÉCURITÉ & INCOGNITO ===
     isIncognitoInput: { type: Boolean, default: false },
     activeSubProfile: { type: mongoose.Schema.Types.ObjectId, ref: "SubProfile", default: null },

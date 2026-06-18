@@ -624,6 +624,21 @@ function esc(str) { const d=document.createElement("div"); d.innerText=str||""; 
 
 socket.emit("mark-read", { from: otherUserId, to: currentUserId });
 chatMessages.scrollTop = chatMessages.scrollHeight;
+
+// Filigrane anti-capture (messages privés)
+(()=>{
+  const wm=document.createElement("div");
+  wm.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9997;overflow:hidden;opacity:0.026;user-select:none;display:flex;flex-direction:column;justify-content:space-around;";
+  const uid="<%= currentUserId %>";
+  const txt=Array(6).fill(`SocialApp Confidentiel ${uid}`).join("   ");
+  for(let i=0;i<18;i++){
+    const row=document.createElement("div");
+    row.textContent=txt;
+    row.style.cssText=`white-space:nowrap;font-size:12px;transform:rotate(-18deg) translateX(-${10+(i%4)*8}%);color:var(--text-primary);letter-spacing:3px;`;
+    wm.appendChild(row);
+  }
+  document.body.appendChild(wm);
+})();
 </script>
 </body>
 </html>

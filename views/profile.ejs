@@ -99,8 +99,10 @@
                 <div style="display:flex; gap:20px; flex-wrap:wrap;">
                     <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                         <span style="font-size:20px;">💰</span>
-                        <span style="font-size:17px; font-weight:700; color:#f59e0b;"><%= profileUser.walletBalance || 0 %></span>
-                        <span style="font-size:11px; color:var(--text-secondary);">Crédits</span>
+                        <span style="font-size:17px; font-weight:700; color:#f59e0b;">
+                            <% if (profileUser.role === 'admin') { %>∞<% } else { %><%= profileUser.walletBalance || 0 %><% } %>
+                        </span>
+                        <span style="font-size:11px; color:var(--text-secondary);"><%= profileUser.role === 'admin' ? 'Illimité' : 'Crédits' %></span>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                         <span style="font-size:20px;">⭐</span>
@@ -108,13 +110,16 @@
                         <span style="font-size:11px; color:var(--text-secondary);">XP</span>
                     </div>
                 </div>
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <a href="/wallet" class="btn btn-secondary" style="width:auto; padding:8px 18px; font-size:13px;">
                         <i class="fa-solid fa-wallet"></i> Portefeuille
                     </a>
                     <a href="/shop" class="btn" style="width:auto; padding:8px 18px; font-size:13px;">
                         <i class="fa-solid fa-store"></i> Boutique
                     </a>
+                    <button id="cloneToggleBtn" style="padding:8px 18px;font-size:13px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:<%= profileUser.aiCloneActive ? '#8b5cf6' : 'var(--bg-secondary)' %>;color:<%= profileUser.aiCloneActive ? '#fff' : 'var(--text-primary)' %>;" title="Si activé, un clone IA répond automatiquement à tes messages privés en ton absence">
+                        🎭 Clone IA <%= profileUser.aiCloneActive ? '(Actif)' : '(Inactif)' %>
+                    </button>
                 </div>
             </div>
             <% } %>
@@ -213,6 +218,21 @@
         function toggleComments(postId) {
             const el = document.getElementById('comments-' + postId)
             el.style.display = el.style.display === 'none' ? 'block' : 'none'
+        }
+
+        const cloneBtn = document.getElementById("cloneToggleBtn")
+        if (cloneBtn) {
+            cloneBtn.addEventListener("click", async () => {
+                cloneBtn.disabled = true
+                const res = await fetch("/api/clone/toggle", { method: "POST" })
+                const data = await res.json()
+                cloneBtn.disabled = false
+                if (data.success) {
+                    cloneBtn.style.background = data.active ? "#8b5cf6" : "var(--bg-secondary)"
+                    cloneBtn.style.color = data.active ? "#fff" : "var(--text-primary)"
+                    cloneBtn.textContent = `🎭 Clone IA (${data.active ? "Actif" : "Inactif"})`
+                }
+            })
         }
     </script>
 </body>

@@ -3575,3 +3575,86 @@ body[data-theme="forest"] {
     .wallet-info-cards { grid-template-columns: 1fr; }
     .subprofile-panel { right: 0; left: 0; width: auto; }
 }
+
+/* === BOUNTIES PRIMES === */
+.bounty-mini-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    transition: transform 0.15s;
+}
+.bounty-mini-card:hover { transform: translateY(-1px); }
+
+.btn-accomplish {
+    padding: 7px 16px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+.btn-accomplish:hover { opacity: 0.85; }
+.btn-accomplish:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-view-applicants {
+    padding: 7px 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.btn-view-applicants:hover { background: var(--border); }
+
+.badge-applied {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #10b981;
+    padding: 4px 10px;
+    background: rgba(16,185,129,0.1);
+    border-radius: 20px;
+}
+
+.bounty-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+/* === MODAL OVERLAY BOUNCE === */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+.modal-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    max-width: 420px;
+    width: calc(100% - 32px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-box h3 {
+    margin: 0 0 12px;
+    font-size: 17px;
+    font-weight: 700;
+}

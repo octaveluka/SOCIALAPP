@@ -11,7 +11,10 @@
                 <div class="wallet-balance-display">
                     <span class="wallet-icon-big">💰</span>
                     <div>
-                        <div class="wallet-amount"><%= user.walletBalance %> <span>crédits</span></div>
+                        <div class="wallet-amount">
+                            <% if (user.role === 'admin') { %>∞ <span>Illimité</span>
+                            <% } else { %><%= user.walletBalance %> <span>crédits</span><% } %>
+                        </div>
                         <div class="wallet-label">Solde disponible</div>
                     </div>
                 </div>

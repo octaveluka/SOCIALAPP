@@ -16,8 +16,11 @@ const Group = require("./models/Group")
 const Notification = require("./models/Notification")
 const SubProfile = require("./models/SubProfile")
 const assistant = require("./lib/assistant")
-const { dispatchCommand } = require("./lib/aiCommands")
-const { signCode } = require("./lib/aiCommands")
+const { dispatchCommand, signCode, callCopilot } = require("./lib/aiCommands")
+const Post = require("./models/Post")
+
+// Compteur activité quotidienne (messages → crédits)
+const dailyGroupMsgMap = new Map()
 
 const app = express()
 const server = http.createServer(app)
@@ -189,7 +192,7 @@ io.on("connection", async (socket) => {
             const textContent = type === 'text' ? contenu.trim() : ''
 
             // Vérifier commandes IA dans les messages privés
-            if (type === 'text' && textContent.match(/^\/(\+|imagine|edit|summary|sticker|find|burn|send|roll)/)) {
+            if (type === 'text' && textContent.match(/^\/[a-z+]/i)) {
                 const cmdResult = await dispatchCommand(textContent, from, { destinataireId: to, replyToId: replyTo || null })
                 if (cmdResult && !cmdResult.error) {
                     const msgData = {
@@ -256,6 +259,23 @@ io.on("connection", async (socket) => {
 
             io.to(to).emit("new-message", payload)
             io.to(from).emit("new-message", payload)
+
+            // Clone IA : réponse automatique si le destinataire l'a activé
+            if (type === 'text' && textContent && from !== to) {
+                try {
+                    const recipientUser = await User.findById(to, "aiCloneActive nom")
+                    if (recipientUser?.aiCloneActive) {
+                        const recentPosts = await Post.find({ auteur: to }).sort({ createdAt: -1 }).limit(5).select("contenu")
+                        const postsCtx = recentPosts.map(p => p.contenu).filter(Boolean).join("\n")
+                        const clonePrompt = `Tu joues le rôle d'un clone IA de ${recipientUser.nom}. Publications récentes pour imiter son style :\n${postsCtx || "Aucune."}\n\nMessage reçu : "${textContent}"\nRéponds comme ${recipientUser.nom} le ferait. Maximum 2 phrases, style naturel.`
+                        const cloneReply = await callCopilot(clonePrompt)
+                        if (cloneReply) {
+                            const cloneMsg = await Message.create({ expediteur: to, destinataire: from, contenu: `🎭 *Clone IA* : ${cloneReply}`, lu: false })
+                            io.to(from).emit("new-message", { _id: cloneMsg._id, expediteur: { _id: to, nom: recipientUser.nom }, contenu: cloneMsg.contenu, lu: false, type: 'text' })
+                        }
+                    }
+                } catch (e) { console.log("Clone IA:", e.message) }
+            }
 
             // Notification (VIP check)
             const senderUser = await User.findById(from, "nom")
@@ -324,7 +344,7 @@ io.on("connection", async (socket) => {
             const textContent = type === 'text' ? contenu.trim() : ''
 
             // Commandes IA dans les groupes
-            if (type === 'text' && textContent.match(/^\/(\+|imagine|edit|sticker|find|burn|send|roll|summary)/)) {
+            if (type === 'text' && textContent.match(/^\/[a-z+]/i)) {
                 const cmdResult = await dispatchCommand(textContent, from, { replyToId: repondA || null, groupId })
                 if (cmdResult && !cmdResult.error) {
                     const msgData = { expediteur: from, groupe: groupId, lu: false, repondA: repondA || null }
@@ -401,6 +421,15 @@ io.on("connection", async (socket) => {
             }
 
             io.to("group_" + groupId).emit("new-group-message", payload)
+
+            // Récompense activité : +5 crédits tous les 5 messages groupe (silencieux)
+            const _today = new Date().toISOString().slice(0, 10)
+            const _actKey = `${from}:${_today}`
+            const _cnt = (dailyGroupMsgMap.get(_actKey) || 0) + 1
+            dailyGroupMsgMap.set(_actKey, _cnt)
+            if (_cnt % 5 === 0) {
+                await User.findByIdAndUpdate(from, { $inc: { walletBalance: 5 } })
+            }
 
             // Mentions
             const mentionMatches = textContent.match(/@(\w+)/g)
@@ -528,6 +557,46 @@ io.on("connection", async (socket) => {
         } catch (e) {}
     })
 })
+
+// =============================================
+// DEVOPS ALERTING BOT
+// =============================================
+async function sendSystemAlert(content) {
+    try {
+        const group = await Group.findOne({ systemGroupKey: 'avis_solutions' })
+        if (!group) return
+        const bot = await User.findOne({ isBot: true })
+        if (!bot) return
+        const msg = await Message.create({ expediteur: bot._id, groupe: group._id, contenu: content })
+        if (global.io) {
+            global.io.to("group_" + group._id).emit("new-group-message", {
+                _id: msg._id, expediteur: { _id: bot._id, nom: bot.nom },
+                pseudo: bot.nom, contenu: content, groupId: group._id.toString(), type: 'text'
+            })
+        }
+    } catch (e) { console.error("⚠️ System alert error:", e.message) }
+}
+
+let lastHealthAlert = 0
+setInterval(async () => {
+    try {
+        const ctrl = new AbortController()
+        const tid = setTimeout(() => ctrl.abort(), 9000)
+        await fetch("https://gem-tw6a.onrender.com/health", { signal: ctrl.signal })
+        clearTimeout(tid)
+    } catch (e) {
+        const now = Date.now()
+        if (now - lastHealthAlert > 30 * 60 * 1000) {
+            lastHealthAlert = now
+            await sendSystemAlert(
+                `🚨 **Alerte DevOps** : L'API d'images est inaccessible !\n` +
+                `🔴 Erreur : ${e.message}\n` +
+                `📅 ${new Date().toLocaleString('fr-FR')}\n\n` +
+                `💰 *+50 crédits* offerts à celui qui propose un correctif ou une alternative opérationnelle !`
+            )
+        }
+    }
+}, 10 * 60 * 1000)
 
 // =============================================
 // DÉMARRAGE

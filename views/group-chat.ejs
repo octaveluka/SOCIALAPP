@@ -78,15 +78,49 @@
     </div>
 
     <% if (group.systemGroupKey === 'primes') { %>
-    <!-- PRIMES TASKS PANEL -->
+    <!-- PRIMES PANEL -->
     <div class="primes-panel" id="primesPanel">
-      <div class="primes-header">
-        <h3>🏆 Tâches Journalières</h3>
-        <p>Accomplis des missions pour gagner des crédits • Se renouvèle chaque jour à minuit</p>
+      <div class="primes-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <h3>🏆 Tâches Journalières</h3>
+          <p>Accomplis des missions pour gagner des crédits • Se renouvèle chaque jour à minuit</p>
+        </div>
+        <% if (isAdmin) { %>
+        <button id="createPrimeBtnGroup" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;">+ Créer prime</button>
+        <% } %>
       </div>
+      <% if (isAdmin) { %>
+      <div id="adminBountyForm" style="display:none;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">💰 Nouvelle prime dans ce groupe</h4>
+        <select id="adminActionType" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:8px;">
+          <option value="">-- Choisir une action --</option>
+          <option value="like_post">👍 Liker ma dernière publication</option>
+          <option value="comment_post">💬 Commenter ma publication</option>
+          <option value="add_friend">🤝 M'envoyer une demande d'ami</option>
+          <option value="publish_post">📝 Publier une actualité aujourd'hui</option>
+          <option value="use_ai">🤖 Utiliser une commande IA</option>
+          <option value="send_5_msgs">✉️ Envoyer 5 messages dans les chats</option>
+          <option value="like_3_posts">❤️ Liker 3 publications</option>
+          <option value="write_2_cmts">✍️ Écrire 2 commentaires</option>
+          <option value="change_avatar">🖼️ Modifier sa photo de profil</option>
+          <option value="join_group">👥 Rejoindre un groupe</option>
+        </select>
+        <input type="number" id="adminRewardAmount" min="1" placeholder="Récompense (crédits)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px;box-sizing:border-box;">
+        <div style="display:flex;gap:8px;">
+          <button id="submitAdminBounty" style="flex:1;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px;cursor:pointer;font-weight:600;font-size:13px;">Créer</button>
+          <button id="cancelAdminBounty" style="flex:1;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;font-size:13px;">Annuler</button>
+        </div>
+      </div>
+      <% } %>
       <div id="tasksContainer">
         <div style="text-align:center;padding:20px;color:var(--text-secondary);">
           <i class="fa-solid fa-spinner fa-spin"></i> Chargement des tâches…
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">💰 Primes Actives</div>
+      <div id="bountiesContainer">
+        <div style="text-align:center;padding:14px;color:var(--text-secondary);font-size:13px;">
+          <i class="fa-solid fa-spinner fa-spin"></i> Chargement…
         </div>
       </div>
     </div>
@@ -724,19 +758,20 @@ document.addEventListener("click",e=>{
 });
 
 <% if (group.systemGroupKey === 'primes') { %>
+// === CHARGEMENT TÂCHES JOURNALIÈRES ===
 (async function loadPrimesTasks(){
   const container=document.getElementById("tasksContainer");
   if(!container)return;
   try{
-    const res=await fetch("/api/daily-tasks");
+    const res=await fetch("/api/daily-tasks",{credentials:"same-origin"});
+    if(!res.ok){container.innerHTML=`<p style="text-align:center;color:var(--text-secondary)">Erreur ${res.status}</p>`;return;}
     const data=await res.json();
-    if(!data.success||!data.tasks.length){container.innerHTML='<p style="text-align:center;color:var(--text-secondary)">Aucune tâche disponible pour aujourd\'hui.</p>';return;}
+    if(!data.success||!data.tasks||!data.tasks.length){container.innerHTML='<p style="text-align:center;color:var(--text-secondary);font-size:13px;">Aucune tâche disponible pour aujourd\'hui.</p>';return;}
     container.innerHTML="";
     data.tasks.forEach(t=>{
       const card=document.createElement("div");
       card.className="task-card"+(t.done?" task-done":"");
       card.dataset.id=t._id;
-      card.dataset.verified="false";
       card.innerHTML=`
         <div class="task-info">
           <div class="task-title">${t.title}</div>
@@ -747,25 +782,25 @@ document.addEventListener("click",e=>{
           ${t.done
             ? '<span class="task-status-done">✅</span>'
             : `<button class="btn-verify" onclick="verifyTask('${t._id}',this)">Vérifier</button>
-               <button class="btn-claim" onclick="claimTask('${t._id}',this)">Valider</button>`
+               <button class="btn-claim" onclick="claimTask('${t._id}',this)" style="display:none">Valider</button>`
           }
         </div>`;
       container.appendChild(card);
     });
-  }catch(e){container.innerHTML='<p style="color:red;text-align:center;">Erreur de chargement</p>';}
+  }catch(e){container.innerHTML='<p style="color:red;text-align:center;font-size:12px;">Erreur de chargement des tâches</p>';}
 })();
 
 async function verifyTask(id,btn){
   btn.disabled=true;btn.textContent="Vérification…";
   try{
-    const res=await fetch(`/api/daily-tasks/${id}/verify`,{method:"POST",headers:{"Content-Type":"application/json"}});
+    const res=await fetch(`/api/daily-tasks/${id}/verify`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin"});
     const data=await res.json();
     if(data.already){btn.disabled=true;btn.textContent="Déjà réclamé";return;}
     if(data.verified){
       btn.textContent="✅ Validé";btn.disabled=true;
       const card=btn.closest(".task-card");
       const claimBtn=card.querySelector(".btn-claim");
-      if(claimBtn)claimBtn.style.display="inline-flex";
+      if(claimBtn){claimBtn.style.display="inline-flex";}
     }else{
       btn.disabled=false;btn.textContent="Vérifier";
       alert("❌ Tâche non accomplie. Complète-la d'abord !");
@@ -776,7 +811,7 @@ async function verifyTask(id,btn){
 async function claimTask(id,btn){
   btn.disabled=true;btn.textContent="…";
   try{
-    const res=await fetch(`/api/daily-tasks/${id}/claim`,{method:"POST",headers:{"Content-Type":"application/json"}});
+    const res=await fetch(`/api/daily-tasks/${id}/claim`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin"});
     const data=await res.json();
     if(data.success){
       const card=btn.closest(".task-card");
@@ -785,6 +820,89 @@ async function claimTask(id,btn){
     }else{btn.disabled=false;btn.textContent="Valider";}
   }catch(e){btn.disabled=false;btn.textContent="Valider";}
 }
+
+// === CHARGEMENT PRIMES ACTIVES ===
+async function loadBounties(){
+  const c=document.getElementById("bountiesContainer");
+  if(!c)return;
+  try{
+    const res=await fetch("/api/bounties/active",{credentials:"same-origin"});
+    const data=await res.json();
+    if(!data.success||!data.bounties||!data.bounties.length){
+      c.innerHTML='<p style="text-align:center;color:var(--text-secondary);font-size:13px;">Aucune prime active pour le moment.</p>';return;
+    }
+    c.innerHTML="";
+    data.bounties.forEach(b=>{
+      const div=document.createElement("div");
+      div.className="bounty-mini-card";
+      div.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+          <span style="font-size:12px;font-weight:700;color:var(--text-primary);">${b.title}</span>
+          <span style="font-size:12px;font-weight:700;color:#f59e0b;">💰 ${b.rewardAmount}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">Par ${b.creatorNom} • ${b.applicantsCount} candidat(s)</div>
+        ${!b.isOwn&&!b.alreadyApplied
+          ?`<button class="btn-accomplish-mini" data-id="${b._id}" style="width:100%;padding:6px;border:none;border-radius:6px;background:var(--primary);color:#fff;cursor:pointer;font-size:12px;font-weight:600;">⚡ Accomplir</button>`
+          :b.alreadyApplied?'<span style="font-size:11px;color:#10b981;font-weight:600;">✅ Déjà accompli</span>':''
+        }`;
+      c.appendChild(div);
+    });
+    c.querySelectorAll(".btn-accomplish-mini").forEach(btn=>{
+      btn.addEventListener("click",async()=>{
+        btn.disabled=true;btn.textContent="Vérification…";
+        try{
+          const r=await fetch(`/api/bounties/${btn.dataset.id}/accomplish`,{method:"POST",credentials:"same-origin"});
+          const d=await r.json();
+          if(d.ok){btn.textContent=`✅ +${d.reward} crédits`;btn.style.background="#10b981";}
+          else{btn.disabled=false;btn.textContent="⚡ Accomplir";alert("❌ "+d.reason);}
+        }catch(e){btn.disabled=false;btn.textContent="⚡ Accomplir";}
+      });
+    });
+  }catch(e){c.innerHTML='<p style="color:red;text-align:center;font-size:12px;">Erreur primes</p>';}
+}
+loadBounties();
+
+// === ADMIN : Créer une prime depuis le groupe ===
+<% if (isAdmin) { %>
+const _createBtn=document.getElementById("createPrimeBtnGroup");
+const _adminForm=document.getElementById("adminBountyForm");
+if(_createBtn&&_adminForm){
+  _createBtn.addEventListener("click",()=>{
+    _adminForm.style.display=_adminForm.style.display==="none"?"block":"none";
+  });
+  document.getElementById("cancelAdminBounty").addEventListener("click",()=>{_adminForm.style.display="none";});
+  document.getElementById("submitAdminBounty").addEventListener("click",async()=>{
+    const actionType=document.getElementById("adminActionType").value;
+    const rewardAmount=parseInt(document.getElementById("adminRewardAmount").value);
+    if(!actionType)return alert("Choisis une action.");
+    if(!rewardAmount||rewardAmount<1)return alert("Montant invalide.");
+    const sbtn=document.getElementById("submitAdminBounty");
+    sbtn.disabled=true;sbtn.textContent="Création…";
+    try{
+      const r=await fetch("/api/bounties",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({actionType,rewardAmount}),credentials:"same-origin"});
+      const d=await r.json();
+      sbtn.disabled=false;sbtn.textContent="Créer";
+      if(d.success){_adminForm.style.display="none";document.getElementById("adminActionType").value="";document.getElementById("adminRewardAmount").value="";loadBounties();}
+      else{alert(d.error);}
+    }catch(e){sbtn.disabled=false;sbtn.textContent="Créer";}
+  });
+}
+<% } %>
+
+// === FILIGRANE ANTI-CAPTURE ===
+(()=>{
+  const wm=document.createElement("div");
+  wm.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9997;overflow:hidden;opacity:0.028;user-select:none;display:flex;flex-direction:column;justify-content:space-around;";
+  const uid="<%= user._id %>";
+  const txt=Array(6).fill(`SocialApp Confidentiel ${uid}`).join("   ");
+  for(let i=0;i<18;i++){
+    const row=document.createElement("div");
+    row.textContent=txt;
+    row.style.cssText=`white-space:nowrap;font-size:12px;transform:rotate(-18deg) translateX(-${10+(i%4)*8}%);color:var(--text-primary);letter-spacing:3px;`;
+    wm.appendChild(row);
+  }
+  document.body.appendChild(wm);
+})();
 <% } %>
 </script>
 </body>
