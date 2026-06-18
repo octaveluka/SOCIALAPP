@@ -87,16 +87,34 @@ description: Key decisions and constraints for SocialApp Node.js/Express/MongoDB
 - chat.ejs now reuses window.notificationSocket instead of creating a new io() connection
 - Uses socket.off() to clear old listeners before rebinding (prevents duplicate events on navigation)
 
-## Watch Party Fix (group-chat.ejs)
-- getYoutubeEmbedUrl() detects YouTube (youtu.be, youtube.com) and Twitch URLs → returns embed URL
-- loadWatchPartyUrl() switches between <iframe> (YouTube/Twitch) and <video> (direct MP4) automatically
-- Other members receive watch-party-sync event and auto-open the panel + load the same URL
+## Watch Party — MODE DIRECT (auto-join)
+- watchPartyState{} map in server.js (in-memory) stores active party per group: { url, currentTime, isPaused, lastUpdate }
+- join-group socket event: if party active for that group → server immediately emits watch-party-sync load event to new joiner
+- watch-party-sync "end" action clears server state + closes panel on all clients
+- No Solo/Sync toggle — everyone in the group always sees the live stream
+- loadWatchSource() always treats as sync; blob URLs show warning "visible uniquement pour toi"
 
-## AI Commands (lib/aiCommands.js)
+## Badges — Expiration 14 jours
+- User.badges schema has expiresAt: Date (null = permanent)
+- Shop buy: new badge sets expiresAt = now+14j; existing active badge extends by 14j; expired badge renewed from now+14j
+- profile.ejs "Ma Collection" card: shows active badges with countdown, expired badges with "Renouveler" link
+
+## Ma Collection (profile.ejs)
+- Card visible only on own profile (isOwnProfile)
+- Shows: active theme, profileTitle, profileFrame, active badges (with expiry/days-left), expired badges (greyed out)
+- Badges expiring ≤3 days shown with ⚠️ warning color
+
+## AI Commands (lib/aiCommands.js) — 23 commandes total
 - /+ → copilot, /imagine → image gen, /edit → image edit, /sticker → sticker, /find → user search
 - /burn → timed message, /send → forward, /roll → dice, /summary → group summary
 - /help /ping /flip /quote /time /who /calc → utility commands
 - /poll Question|Opt1|Opt2 → predictive poll with AI winner prediction
+- /traduis <langue> <texte> → translation via copilot
+- /météo <ville> → simulated weather via copilot
+- /blague → random joke via copilot
+- /roast @pseudo → friendly roast via copilot
+- /histoire <sujet> → short story via copilot
+- /astro <signe> → horoscope via copilot
 - commands regex in server.js: /^\/[a-z+]/i (covers ALL slash commands)
 
 ## Anti-Screenshot Watermark

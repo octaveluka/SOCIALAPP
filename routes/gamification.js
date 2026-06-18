@@ -179,14 +179,19 @@ router.post("/api/shop/buy", requireAuth, async (req, res) => {
             result = { profileFrame: item.value }
 
         } else if (item.type === "badge") {
-            const already = user.badges.some(b => b.type === item.value)
-            if (already) {
-                // Rembourser
-                user.walletBalance += item.price
-                return res.json({ success: false, error: "Tu possèdes déjà ce badge !" })
+            const now = new Date()
+            const existing = user.badges.find(b => b.type === item.value)
+            if (existing && existing.expiresAt && existing.expiresAt > now) {
+                // Prolonger de 14 jours à partir de l'expiration actuelle
+                existing.expiresAt = new Date(existing.expiresAt.getTime() + 14 * 24 * 3600 * 1000)
+            } else if (existing && (!existing.expiresAt || existing.expiresAt <= now)) {
+                // Badge expiré → renouveler
+                existing.expiresAt = new Date(Date.now() + 14 * 24 * 3600 * 1000)
+            } else {
+                // Nouveau badge
+                user.badges.push({ type: item.value, expiresAt: new Date(Date.now() + 14 * 24 * 3600 * 1000) })
             }
-            user.badges.push({ type: item.value })
-            result = { badge: item.value }
+            result = { badge: item.value, expiresAt: existing ? existing.expiresAt : user.badges[user.badges.length - 1].expiresAt }
 
         } else if (item.type === "credits") {
             user.walletBalance += item.amount

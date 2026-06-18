@@ -19,7 +19,8 @@ const userSchema = new mongoose.Schema({
             type: String,
             enum: ["verifie", "moderateur", "fondateur", "premium", "staff"],
             required: true
-        }
+        },
+        expiresAt: { type: Date, default: null }
     }],
     isBot: { type: Boolean, default: false },
     welcomeSent: { type: Boolean, default: false },

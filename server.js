@@ -163,6 +163,9 @@ app.use("/", require("./routes/dailytasks"))
 // =============================================
 // SOCKET.IO
 // =============================================
+// Watch Party : état en mémoire par groupe
+const watchPartyState = {} // { [groupId]: { url, currentTime, isPaused, lastUpdate } }
+
 io.on("connection", async (socket) => {
     const userId = socket.handshake.query.userId
     if (!userId) return
@@ -324,7 +327,16 @@ io.on("connection", async (socket) => {
     })
 
     // === GROUPES ===
-    socket.on("join-group", (groupId) => { socket.join("group_" + groupId) })
+    socket.on("join-group", (groupId) => {
+        socket.join("group_" + groupId)
+        // Envoyer l'état Watch Party actuel au nouveau membre (auto-join direct)
+        const wp = watchPartyState[groupId]
+        if (wp && wp.url) {
+            const elapsed = wp.isPaused ? 0 : Math.max(0, (Date.now() - wp.lastUpdate) / 1000)
+            const estimatedTime = wp.currentTime + elapsed
+            socket.emit("watch-party-sync", { action: "load", url: wp.url, currentTime: estimatedTime, from: "server" })
+        }
+    })
 
     socket.on("send-group-message", async (data) => {
         try {
@@ -532,6 +544,20 @@ io.on("connection", async (socket) => {
     // === WATCH PARTY ===
     socket.on("watch-party-sync", (data) => {
         const { groupId, action, currentTime, url } = data
+        if (!groupId) return
+        if (action === "load" && url) {
+            watchPartyState[groupId] = { url, currentTime: 0, isPaused: false, lastUpdate: Date.now() }
+        } else if (action === "play" && watchPartyState[groupId]) {
+            watchPartyState[groupId].currentTime = currentTime || 0
+            watchPartyState[groupId].isPaused = false
+            watchPartyState[groupId].lastUpdate = Date.now()
+        } else if ((action === "pause" || action === "seek") && watchPartyState[groupId]) {
+            watchPartyState[groupId].currentTime = currentTime || 0
+            watchPartyState[groupId].isPaused = (action === "pause")
+            watchPartyState[groupId].lastUpdate = Date.now()
+        } else if (action === "end") {
+            delete watchPartyState[groupId]
+        }
         socket.to("group_" + groupId).emit("watch-party-sync", { action, currentTime, url, from: userId })
     })
 

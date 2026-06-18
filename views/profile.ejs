@@ -140,6 +140,110 @@
             </div>
             <% } %>
 
+            <!-- MA COLLECTION -->
+            <% if (isOwnProfile) {
+                const now = new Date();
+                const activeBadges = (profileUser.badges || []).filter(b => !b.expiresAt || new Date(b.expiresAt) > now);
+                const expiredBadges = (profileUser.badges || []).filter(b => b.expiresAt && new Date(b.expiresAt) <= now);
+                const hasCollection = activeBadges.length > 0 || expiredBadges.length > 0 || profileUser.profileTitle || profileUser.profileFrame || (profileUser.theme && profileUser.theme !== 'default');
+            %>
+            <div class="card" style="padding:16px 20px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                    <span style="font-size:20px;">🎒</span>
+                    <div>
+                        <div style="font-size:14px;font-weight:700;">Ma Collection</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">Tous tes cosmétiques actifs et expirés</div>
+                    </div>
+                </div>
+                <% if (!hasCollection) { %>
+                <div style="text-align:center;padding:16px;color:var(--text-secondary);font-size:13px;">
+                    <i class="fa-solid fa-box-open" style="font-size:28px;margin-bottom:8px;display:block;opacity:0.4;"></i>
+                    Ta collection est vide — visite la <a href="/shop" style="color:var(--primary);">Boutique</a> pour obtenir des cosmétiques !
+                </div>
+                <% } else { %>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+
+                    <% if (profileUser.theme && profileUser.theme !== 'default') { %>
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border);">
+                        <span style="font-size:20px;">🎨</span>
+                        <div style="flex:1;">
+                            <div style="font-size:13px;font-weight:600;">Thème : <span style="text-transform:capitalize;color:var(--primary);"><%= profileUser.theme %></span></div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Thème actif sur ton profil</div>
+                        </div>
+                        <span style="font-size:11px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:20px;font-weight:600;">✓ Actif</span>
+                    </div>
+                    <% } %>
+
+                    <% if (profileUser.profileTitle) { %>
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border);">
+                        <span style="font-size:20px;">👑</span>
+                        <div style="flex:1;">
+                            <div style="font-size:13px;font-weight:600;">Titre : <span style="color:var(--primary);"><%= profileUser.profileTitle %></span></div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Affiché sous ton nom de profil</div>
+                        </div>
+                        <span style="font-size:11px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:20px;font-weight:600;">✓ Actif</span>
+                    </div>
+                    <% } %>
+
+                    <% if (profileUser.profileFrame) { %>
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border);">
+                        <span style="font-size:20px;">🖼️</span>
+                        <div style="flex:1;">
+                            <div style="font-size:13px;font-weight:600;">Cadre : <span style="text-transform:capitalize;color:var(--primary);"><%= profileUser.profileFrame %></span></div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Cadre autour de ta photo de profil</div>
+                        </div>
+                        <span style="font-size:11px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:20px;font-weight:600;">✓ Actif</span>
+                    </div>
+                    <% } %>
+
+                    <% if (activeBadges.length > 0) { %>
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Badges actifs</div>
+                        <% activeBadges.forEach(badge => {
+                            const badgeEmojis = { verifie: '✅', moderateur: '🛡️', fondateur: '🏆', premium: '💎', staff: '⭐' };
+                            const daysLeft = badge.expiresAt ? Math.ceil((new Date(badge.expiresAt) - now) / (1000*60*60*24)) : null;
+                        %>
+                        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border);margin-bottom:6px;">
+                            <span style="font-size:20px;"><%= badgeEmojis[badge.type] || '🏅' %></span>
+                            <div style="flex:1;">
+                                <div style="font-size:13px;font-weight:600;text-transform:capitalize;"><%= badge.type %></div>
+                                <% if (badge.expiresAt) { %>
+                                <div style="font-size:11px;color:<%= daysLeft <= 3 ? '#f59e0b' : 'var(--text-secondary)' %>;">
+                                    <% if (daysLeft <= 3) { %>⚠️ Expire dans <%= daysLeft %> jour<%= daysLeft > 1 ? 's' : '' %> (<%= new Date(badge.expiresAt).toLocaleDateString('fr-FR') %>)<% } else { %>Expire le <%= new Date(badge.expiresAt).toLocaleDateString('fr-FR') %><% } %>
+                                </div>
+                                <% } else { %>
+                                <div style="font-size:11px;color:var(--text-secondary);">Badge permanent</div>
+                                <% } %>
+                            </div>
+                            <span style="font-size:11px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 8px;border-radius:20px;font-weight:600;">✓ Actif</span>
+                        </div>
+                        <% }) %>
+                    </div>
+                    <% } %>
+
+                    <% if (expiredBadges.length > 0) { %>
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Badges expirés</div>
+                        <% expiredBadges.forEach(badge => {
+                            const badgeEmojis = { verifie: '✅', moderateur: '🛡️', fondateur: '🏆', premium: '💎', staff: '⭐' };
+                        %>
+                        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border);margin-bottom:6px;opacity:0.6;">
+                            <span style="font-size:20px;filter:grayscale(1);"><%= badgeEmojis[badge.type] || '🏅' %></span>
+                            <div style="flex:1;">
+                                <div style="font-size:13px;font-weight:600;text-transform:capitalize;"><%= badge.type %></div>
+                                <div style="font-size:11px;color:var(--text-secondary);">Expiré le <%= new Date(badge.expiresAt).toLocaleDateString('fr-FR') %></div>
+                            </div>
+                            <a href="/shop" style="font-size:11px;background:var(--primary);color:#fff;padding:3px 10px;border-radius:20px;font-weight:600;text-decoration:none;">Renouveler</a>
+                        </div>
+                        <% }) %>
+                    </div>
+                    <% } %>
+
+                </div>
+                <% } %>
+            </div>
+            <% } %>
+
             <!-- Publications -->
             <% if (posts.length === 0) { %>
                 <div class="card empty-state">
