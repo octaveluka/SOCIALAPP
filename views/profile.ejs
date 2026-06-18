@@ -122,6 +122,22 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Clone IA - Instructions -->
+            <div class="card" id="cloneInstructionsCard" style="padding:16px 20px; display:<%= profileUser.aiCloneActive ? 'block' : 'none' %>;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                    <span style="font-size:20px;">🎭</span>
+                    <div>
+                        <div style="font-weight:700; font-size:14px;">Instructions du Clone IA</div>
+                        <div style="font-size:12px; color:var(--text-secondary);">Donne des consignes précises à ton clone pour qu'il réponde à ta façon</div>
+                    </div>
+                </div>
+                <textarea id="cloneInstructionsInput" maxlength="500" rows="3" placeholder="Ex : Réponds de façon détendue et ajoute des emojis. Si on te demande où je suis, dis que je suis occupé mais que je reviens bientôt. Ne révèle jamais d'informations personnelles." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg-secondary);color:var(--text-primary);resize:vertical;box-sizing:border-box;font-family:inherit;"><%= profileUser.aiCloneInstructions || '' %></textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                    <span id="cloneInstrCount" style="font-size:11px; color:var(--text-secondary);"><%= (profileUser.aiCloneInstructions || '').length %>/500</span>
+                    <button id="saveCloneInstructions" class="btn" style="width:auto; padding:7px 18px; font-size:13px;">Enregistrer</button>
+                </div>
+            </div>
             <% } %>
 
             <!-- Publications -->
@@ -221,6 +237,7 @@
         }
 
         const cloneBtn = document.getElementById("cloneToggleBtn")
+        const cloneCard = document.getElementById("cloneInstructionsCard")
         if (cloneBtn) {
             cloneBtn.addEventListener("click", async () => {
                 cloneBtn.disabled = true
@@ -231,6 +248,35 @@
                     cloneBtn.style.background = data.active ? "#8b5cf6" : "var(--bg-secondary)"
                     cloneBtn.style.color = data.active ? "#fff" : "var(--text-primary)"
                     cloneBtn.textContent = `🎭 Clone IA (${data.active ? "Actif" : "Inactif"})`
+                    if (cloneCard) cloneCard.style.display = data.active ? "block" : "none"
+                }
+            })
+        }
+
+        const saveCloneBtn = document.getElementById("saveCloneInstructions")
+        const instrInput = document.getElementById("cloneInstructionsInput")
+        const instrCount = document.getElementById("cloneInstrCount")
+        if (instrInput && instrCount) {
+            instrInput.addEventListener("input", () => {
+                instrCount.textContent = instrInput.value.length + "/500"
+            })
+        }
+        if (saveCloneBtn && instrInput) {
+            saveCloneBtn.addEventListener("click", async () => {
+                saveCloneBtn.disabled = true
+                saveCloneBtn.textContent = "Enregistrement…"
+                try {
+                    const res = await fetch("/api/clone/instructions", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ instructions: instrInput.value })
+                    })
+                    const data = await res.json()
+                    saveCloneBtn.textContent = data.success ? "✓ Enregistré !" : "Erreur"
+                    setTimeout(() => { saveCloneBtn.disabled = false; saveCloneBtn.textContent = "Enregistrer" }, 2000)
+                } catch(e) {
+                    saveCloneBtn.disabled = false
+                    saveCloneBtn.textContent = "Erreur réseau"
                 }
             })
         }

@@ -61,10 +61,14 @@
         <button id="closeWatchBtn" style="background:none;border:none;cursor:pointer;font-size:16px;">✕</button>
       </div>
       <div style="display:flex;gap:8px;padding:8px;">
-        <input type="text" id="watchUrlInput" placeholder="URL de la vidéo (mp4, youtube...)" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+        <input type="text" id="watchUrlInput" placeholder="URL YouTube, MP4, Twitch…" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
         <button id="watchLoadBtn" class="btn-primary-action" style="padding:8px 16px;">Charger</button>
       </div>
-      <video id="watchVideo" controls style="width:100%;max-height:250px;background:#000;display:none;"></video>
+      <div id="watchPlayerContainer" style="width:100%;background:#000;display:none;position:relative;">
+        <iframe id="watchIframe" style="width:100%;height:250px;border:none;display:none;" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+        <video id="watchVideo" controls style="width:100%;max-height:250px;background:#000;display:none;"></video>
+      </div>
+      <div id="watchPartyStatus" style="font-size:11px;color:var(--text-secondary);padding:4px 8px;display:none;"></div>
     </div>
 
     <!-- SUBPROFILE PANEL -->
@@ -527,15 +531,59 @@ async function initiateCall(peerId){
 // =============================================
 // WATCH PARTY
 // =============================================
+function getYoutubeEmbedUrl(url) {
+  try {
+    const u = new URL(url);
+    let videoId = null;
+    if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
+      if (u.hostname === "youtu.be") videoId = u.pathname.slice(1);
+      else videoId = u.searchParams.get("v") || (u.pathname.startsWith("/embed/") ? u.pathname.split("/embed/")[1] : null);
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+    }
+    if (u.hostname.includes("twitch.tv")) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts[0]) return `https://player.twitch.tv/?channel=${parts[0]}&parent=${location.hostname}&autoplay=true`;
+    }
+  } catch(e) {}
+  return null;
+}
+
+function loadWatchPartyUrl(url) {
+  const container = document.getElementById("watchPlayerContainer");
+  const iframe = document.getElementById("watchIframe");
+  const video = document.getElementById("watchVideo");
+  const status = document.getElementById("watchPartyStatus");
+  container.style.display = "block";
+  const embedUrl = getYoutubeEmbedUrl(url);
+  if (embedUrl) {
+    iframe.src = embedUrl;
+    iframe.style.display = "block";
+    video.style.display = "none";
+    video.src = "";
+    if (status) { status.textContent = "▶ Vidéo YouTube/Twitch chargée — synchronisée avec le groupe"; status.style.display = "block"; }
+  } else {
+    video.src = url;
+    video.style.display = "block";
+    iframe.style.display = "none";
+    iframe.src = "";
+    video.play().catch(()=>{});
+    if (status) { status.textContent = "▶ Vidéo directe chargée — synchronisée avec le groupe"; status.style.display = "block"; }
+  }
+}
+
 document.getElementById("watchPartyBtn").addEventListener("click",()=>{
   const p=document.getElementById("watchPartyPanel");p.style.display=p.style.display==="none"?"block":"none";
 });
-document.getElementById("closeWatchBtn").addEventListener("click",()=>{document.getElementById("watchPartyPanel").style.display="none";});
+document.getElementById("closeWatchBtn").addEventListener("click",()=>{
+  document.getElementById("watchPartyPanel").style.display="none";
+  const video=document.getElementById("watchVideo");
+  video.pause(); video.src="";
+  document.getElementById("watchIframe").src="";
+});
 document.getElementById("watchLoadBtn").addEventListener("click",()=>{
   const url=document.getElementById("watchUrlInput").value.trim();
   if(!url) return;
-  const video=document.getElementById("watchVideo");
-  video.src=url;video.style.display="block";video.play();
+  loadWatchPartyUrl(url);
   socket.emit("watch-party-sync",{groupId,action:"load",url});
 });
 const watchVideo=document.getElementById("watchVideo");
@@ -544,10 +592,14 @@ watchVideo.addEventListener("pause",()=>socket.emit("watch-party-sync",{groupId,
 watchVideo.addEventListener("seeked",()=>socket.emit("watch-party-sync",{groupId,action:"seek",currentTime:watchVideo.currentTime}));
 socket.on("watch-party-sync",data=>{
   if(data.from===currentUserId) return;
-  if(data.url&&data.action==="load"){watchVideo.src=data.url;watchVideo.style.display="block";}
-  if(data.action==="play"){watchVideo.currentTime=data.currentTime;watchVideo.play().catch(()=>{});}
-  if(data.action==="pause"){watchVideo.currentTime=data.currentTime;watchVideo.pause();}
-  if(data.action==="seek") watchVideo.currentTime=data.currentTime;
+  if(data.url&&data.action==="load"){
+    document.getElementById("watchPartyPanel").style.display="block";
+    document.getElementById("watchUrlInput").value=data.url;
+    loadWatchPartyUrl(data.url);
+  }
+  if(data.action==="play"&&watchVideo.style.display!=="none"){watchVideo.currentTime=data.currentTime;watchVideo.play().catch(()=>{});}
+  if(data.action==="pause"&&watchVideo.style.display!=="none"){watchVideo.currentTime=data.currentTime;watchVideo.pause();}
+  if(data.action==="seek"&&watchVideo.style.display!=="none") watchVideo.currentTime=data.currentTime;
 });
 
 

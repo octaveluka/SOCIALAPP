@@ -27,10 +27,18 @@ const userSchema = new mongoose.Schema({
     // === GAMIFICATION ===
     xp: { type: Number, default: 0 },
     walletBalance: { type: Number, default: 0 },
-    theme: { type: String, default: "default", enum: ["default", "dark", "neon", "ocean", "sunset", "forest"] },
+    theme: { type: String, default: "default", enum: ["default", "dark", "neon", "ocean", "sunset", "forest", "cyberpunk", "rose", "galaxie", "minuit"] },
 
     // === CLONE IA ===
     aiCloneActive: { type: Boolean, default: false },
+    aiCloneInstructions: { type: String, default: "" },
+
+    // === BOUTIQUE ===
+    xpBoostExpiry: { type: Date, default: null },
+    profileTitle: { type: String, default: null },
+    profileFrame: { type: String, default: null, enum: [null, "bronze", "argent", "or", "diamant"] },
+
+    lastFreeCredits: { type: Date, default: null },
 
     // === SÉCURITÉ & INCOGNITO ===
     isIncognitoInput: { type: Boolean, default: false },

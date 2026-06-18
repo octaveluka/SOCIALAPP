@@ -215,8 +215,10 @@ io.on("connection", async (socket) => {
                     io.to(to).emit("new-message", payload)
                     io.to(from).emit("new-message", payload)
 
-                    // XP
-                    await User.findByIdAndUpdate(from, { $inc: { xp: 2 } })
+                    // XP (avec boost éventuel)
+                    const _senderForBoost = await User.findById(from, "xpBoostExpiry")
+                    const _xpBoost = _senderForBoost?.xpBoostExpiry && _senderForBoost.xpBoostExpiry > new Date()
+                    await User.findByIdAndUpdate(from, { $inc: { xp: _xpBoost ? 4 : 2 } })
                     return
                 } else if (cmdResult && cmdResult.error) {
                     // Renvoyer l'erreur comme message système
@@ -236,8 +238,10 @@ io.on("connection", async (socket) => {
                 lu: false
             })
 
-            // XP pour message envoyé
-            await User.findByIdAndUpdate(from, { $inc: { xp: 1 } })
+            // XP pour message envoyé (avec boost éventuel)
+            const _senderBoostCheck = await User.findById(from, "xpBoostExpiry")
+            const _hasBoost = _senderBoostCheck?.xpBoostExpiry && _senderBoostCheck.xpBoostExpiry > new Date()
+            await User.findByIdAndUpdate(from, { $inc: { xp: _hasBoost ? 2 : 1 } })
 
             let repondAData = null
             if (replyTo) {
@@ -263,11 +267,12 @@ io.on("connection", async (socket) => {
             // Clone IA : réponse automatique si le destinataire l'a activé
             if (type === 'text' && textContent && from !== to) {
                 try {
-                    const recipientUser = await User.findById(to, "aiCloneActive nom")
+                    const recipientUser = await User.findById(to, "aiCloneActive aiCloneInstructions nom")
                     if (recipientUser?.aiCloneActive) {
                         const recentPosts = await Post.find({ auteur: to }).sort({ createdAt: -1 }).limit(5).select("contenu")
                         const postsCtx = recentPosts.map(p => p.contenu).filter(Boolean).join("\n")
-                        const clonePrompt = `Tu joues le rôle d'un clone IA de ${recipientUser.nom}. Publications récentes pour imiter son style :\n${postsCtx || "Aucune."}\n\nMessage reçu : "${textContent}"\nRéponds comme ${recipientUser.nom} le ferait. Maximum 2 phrases, style naturel.`
+                        const customInstructions = recipientUser.aiCloneInstructions ? `\nInstructions spéciales : ${recipientUser.aiCloneInstructions}` : ""
+                        const clonePrompt = `Tu joues le rôle d'un clone IA de ${recipientUser.nom}. Publications récentes pour imiter son style :\n${postsCtx || "Aucune."}${customInstructions}\n\nMessage reçu : "${textContent}"\nRéponds comme ${recipientUser.nom} le ferait. Maximum 2 phrases, style naturel.`
                         const cloneReply = await callCopilot(clonePrompt)
                         if (cloneReply) {
                             const cloneMsg = await Message.create({ expediteur: to, destinataire: from, contenu: `🎭 *Clone IA* : ${cloneReply}`, lu: false })
@@ -576,6 +581,20 @@ async function sendSystemAlert(content) {
         }
     } catch (e) { console.error("⚠️ System alert error:", e.message) }
 }
+
+// =============================================
+// NETTOYAGE SALONS ÉPHÉMÈRES (toutes les heures)
+// =============================================
+setInterval(async () => {
+    try {
+        const expiredGroups = await Group.find({ isEphemeral: true, expiresAt: { $lt: new Date() } })
+        for (const g of expiredGroups) {
+            await Message.deleteMany({ groupe: g._id })
+            await Group.findByIdAndDelete(g._id)
+            console.log(`🗑️ Salon éphémère supprimé : ${g.nom}`)
+        }
+    } catch (e) { console.error("Ephemeral cleanup:", e.message) }
+}, 60 * 60 * 1000)
 
 let lastHealthAlert = 0
 setInterval(async () => {

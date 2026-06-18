@@ -171,7 +171,13 @@ let isLocked = <%= isLocked %>;
 let replyingTo = null;
 let mediaRecorder = null, audioChunks = [], isRecording = false, recordingTimer = null, recordingSeconds = 0;
 
-const socket = io({ query: { userId: currentUserId } });
+let socket;
+if (window.notificationSocket) { socket = window.notificationSocket; }
+else { socket = io({ query: { userId: currentUserId } }); window.notificationSocket = socket; }
+socket.off("new-message");
+socket.off("messages-read");
+socket.off("message-deleted");
+socket.off("message-reacted-ib");
 const chatMessages = document.getElementById("chatMessages");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");

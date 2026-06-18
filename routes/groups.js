@@ -98,8 +98,27 @@ router.get("/groups/:id", requireAuth, async (req, res) => {
             return res.redirect("/messages")
         }
 
+        // Vérifier expiration salon éphémère
+        if (group.isEphemeral && group.expiresAt && new Date() > group.expiresAt) {
+            await Message.deleteMany({ groupe: group._id })
+            await Group.findByIdAndDelete(group._id)
+            req.flash("error", "Ce salon éphémère a expiré et a été supprimé.")
+            return res.redirect("/messages")
+        }
+
         const currentUserId = req.session.user.id
-        const membre = group.membres.find(m => m.user._id.toString() === currentUserId)
+        const currentUserRole = req.session.user.role
+        const isSiteAdmin = currentUserRole === "admin"
+
+        let membre = group.membres.find(m => m.user._id.toString() === currentUserId)
+
+        // Les admins du site peuvent accéder à tous les groupes
+        if (!membre && isSiteAdmin) {
+            group.membres.push({ user: { _id: currentUserId, nom: req.session.user.nom || "Admin", photoProfil: req.session.user.photoProfil || "", enLigne: true, badges: [] }, isAdmin: true, pseudo: null })
+            membre = group.membres[group.membres.length - 1]
+            // Sauvegarder en DB
+            await Group.findByIdAndUpdate(group._id, { $push: { membres: { user: currentUserId, isAdmin: true } } })
+        }
 
         if (!membre) {
             req.flash("error", "Tu n'es pas membre de ce groupe.")
@@ -113,8 +132,13 @@ router.get("/groups/:id", requireAuth, async (req, res) => {
 
         const pseudoMap = {}
         group.membres.forEach(m => {
-            pseudoMap[m.user._id.toString()] = m.pseudo || m.user.nom
+            if (m.user && m.user._id) {
+                pseudoMap[m.user._id.toString()] = m.pseudo || m.user.nom
+            }
         })
+
+        // Admin du site = toujours admin dans le groupe
+        const isAdmin = isSiteAdmin || membre.isAdmin
 
         res.render("group-chat", {
             title: group.nom,
@@ -122,7 +146,7 @@ router.get("/groups/:id", requireAuth, async (req, res) => {
             group,
             messages,
             currentUserId,
-            isAdmin: membre.isAdmin,
+            isAdmin,
             pseudoMap
         })
     } catch (err) {
@@ -333,6 +357,62 @@ router.post("/groups/:id/regenerate-link", requireAuth, async (req, res) => {
     } catch (err) {
         console.error(err)
         res.status(500).json({ error: "Erreur serveur" })
+    }
+})
+
+// =============================================
+// SALONS ÉPHÉMÈRES
+// =============================================
+
+router.get("/salons/new", requireAuth, async (req, res) => {
+    try {
+        const currentUser = await User.findById(req.session.user.id).populate("amis", "nom photoProfil enLigne")
+        res.render("new-salon", {
+            title: "Nouveau salon éphémère",
+            currentPage: "messages",
+            amis: currentUser.amis
+        })
+    } catch (err) {
+        console.error(err)
+        res.redirect("/messages")
+    }
+})
+
+router.post("/salons/new", requireAuth, async (req, res) => {
+    try {
+        const { nom, membres, dureeHeures } = req.body
+        const currentUserId = req.session.user.id
+
+        if (!nom || nom.trim().length === 0) {
+            return res.status(400).json({ error: "Le nom du salon est requis." })
+        }
+
+        const heures = Math.max(1, Math.min(168, parseInt(dureeHeures) || 24))
+        const expiresAt = new Date(Date.now() + heures * 3600 * 1000)
+
+        let membresIds = []
+        if (membres) {
+            membresIds = Array.isArray(membres) ? membres : [membres]
+        }
+
+        const listeMembres = [{ user: currentUserId, isAdmin: true }]
+        membresIds.forEach(id => {
+            if (id !== currentUserId) listeMembres.push({ user: id, isAdmin: false })
+        })
+
+        const group = await Group.create({
+            nom: nom.trim(),
+            createur: currentUserId,
+            membres: listeMembres,
+            inviteCode: genererCode(),
+            isEphemeral: true,
+            expiresAt
+        })
+
+        res.json({ success: true, groupId: group._id })
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ error: "Erreur lors de la création du salon." })
     }
 })
 

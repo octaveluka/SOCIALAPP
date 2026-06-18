@@ -26,6 +26,10 @@ const groupSchema = new mongoose.Schema({
     // === VOICE ROOM ===
     voiceRoomActive: { type: Boolean, default: false },
     voiceRoomMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // === SALON ÉPHÉMÈRE ===
+    isEphemeral: { type: Boolean, default: false },
+    expiresAt: { type: Date, default: null },
 }, { timestamps: true })
 
 module.exports = mongoose.models.Group || mongoose.model("Group", groupSchema)

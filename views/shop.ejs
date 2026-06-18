@@ -12,6 +12,9 @@
                 <div class="shop-balance">
                     <span>💰</span>
                     <span id="shopBalance"><%= user.walletBalance %></span> crédits
+                    <% if (user.xpBoostExpiry && new Date(user.xpBoostExpiry) > new Date()) { %>
+                        <span style="margin-left:10px;font-size:11px;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:2px 8px;border-radius:20px;font-weight:700;">⚡ Boost XP actif</span>
+                    <% } %>
                 </div>
             </div>
 
@@ -22,45 +25,98 @@
                 <div class="flash error"><%= error[0] %></div>
             <% } %>
 
-            <p style="margin-bottom:24px; color:var(--text-secondary);">Personnalise l'apparence de l'application avec des thèmes visuels.</p>
+            <%
+            const categories = [...new Set(shopItems.map(i => i.category))]
+            %>
 
-            <div class="shop-grid">
-                <% shopItems.forEach(item => { %>
-                <div class="shop-item theme-preview-<%= item.theme %> <%= user.theme === item.theme ? 'active-theme' : '' %>">
-                    <div class="shop-item-emoji"><%= item.emoji %></div>
-                    <div class="shop-item-name"><%= item.name %></div>
-                    <div class="shop-item-price">
-                        <% if (item.price === 0) { %>
-                            <span class="price-free">Gratuit</span>
+            <% categories.forEach(cat => { %>
+            <div class="shop-category">
+                <div class="shop-category-title">
+                    <% const catEmojis = { 'Thèmes': '🎨', 'Boosts': '⚡', 'Titres': '🏅', 'Cadres': '🖼️', 'Badges': '🎖️' } %>
+                    <%= catEmojis[cat] || '✨' %> <%= cat %>
+                </div>
+                <div class="shop-grid">
+                    <% shopItems.filter(i => i.category === cat).forEach(item => {
+                        let isOwned = false
+                        if (item.type === 'theme') isOwned = user.theme === item.theme
+                        else if (item.type === 'title') isOwned = user.profileTitle === item.value
+                        else if (item.type === 'frame') isOwned = user.profileFrame === item.value
+                        else if (item.type === 'badge') isOwned = (user.badges || []).some(b => b.type === item.value)
+                    %>
+                    <div class="shop-item <%= item.type === 'theme' ? 'theme-preview-' + item.theme : '' %> <%= isOwned ? 'active-theme' : '' %>">
+                        <div class="shop-item-emoji"><%= item.emoji %></div>
+                        <div class="shop-item-name"><%= item.name %></div>
+                        <div class="shop-item-desc" style="font-size:11px;color:var(--text-secondary);margin:4px 0 8px;min-height:28px;line-height:1.4;"><%= item.desc %></div>
+                        <div class="shop-item-price">
+                            <% if (item.price === 0) { %>
+                                <span class="price-free">Gratuit</span>
+                            <% } else { %>
+                                <span class="price-credits">💰 <%= item.price %> crédits</span>
+                            <% } %>
+                        </div>
+                        <% if (isOwned) { %>
+                            <button class="btn-shop-active" disabled>✓ Actif</button>
                         <% } else { %>
-                            <span class="price-credits">💰 <%= item.price %> crédits</span>
+                            <button class="btn-shop-buy"
+                                data-item-id="<%= item.id %>"
+                                data-price="<%= item.price %>"
+                                data-type="<%= item.type %>"
+                                data-name="<%= item.name %>">
+                                <%= item.price === 0 ? 'Réclamer' : item.type === 'xpboost' ? '⚡ Activer' : item.type === 'credits' ? '💰 Obtenir' : 'Acheter' %>
+                            </button>
                         <% } %>
                     </div>
-                    <% if (user.theme === item.theme) { %>
-                        <button class="btn-shop-active" disabled>✓ Actif</button>
-                    <% } else { %>
-                        <button class="btn-shop-buy" data-item-id="<%= item.id %>" data-price="<%= item.price %>">
-                            <%= item.price === 0 ? 'Activer' : 'Acheter' %>
-                        </button>
-                    <% } %>
+                    <% }) %>
                 </div>
-                <% }) %>
             </div>
+            <% }) %>
         </div>
     </div>
 </div>
 
+<div id="shopToast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:12px 24px;border-radius:12px;font-weight:600;font-size:14px;display:none;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);"></div>
+
+<style>
+.shop-category { margin-bottom: 32px; }
+.shop-category-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+.shop-item { background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 14px; text-align: center; transition: all 0.2s; }
+.shop-item:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.1); border-color: var(--primary); }
+.shop-item.active-theme { border-color: var(--primary); background: var(--primary)11; box-shadow: 0 0 0 2px var(--primary)44; }
+.shop-item-emoji { font-size: 32px; margin-bottom: 8px; }
+.shop-item-name { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.btn-shop-buy { width: 100%; padding: 8px; border-radius: 8px; border: none; background: var(--primary); color: #fff; font-weight: 600; font-size: 12px; cursor: pointer; transition: opacity 0.2s; margin-top: 4px; }
+.btn-shop-buy:hover { opacity: 0.85; }
+.btn-shop-active { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--primary); background: transparent; color: var(--primary); font-weight: 600; font-size: 12px; cursor: default; margin-top: 4px; }
+.price-free { color: #10b981; font-weight: 700; font-size: 13px; }
+.price-credits { color: #f59e0b; font-weight: 700; font-size: 13px; }
+.shop-balance { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; color: #f59e0b; }
+.shop-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.shop-header h2 { font-size: 22px; font-weight: 800; margin: 0; }
+</style>
+
 <script>
+function showToast(msg, ok=true) {
+    const t = document.getElementById("shopToast")
+    t.textContent = msg
+    t.style.background = ok ? "#10b981" : "#ef4444"
+    t.style.display = "block"
+    setTimeout(() => { t.style.display = "none" }, 3000)
+}
+
 document.querySelectorAll(".btn-shop-buy").forEach(btn => {
     btn.addEventListener("click", async function() {
         const itemId = this.dataset.itemId
         const price = parseInt(this.dataset.price)
+        const type = this.dataset.type
+        const name = this.dataset.name
         const balance = parseInt(document.getElementById("shopBalance").textContent)
         if (price > 0 && balance < price) {
-            alert(`Solde insuffisant ! Tu as ${balance} crédits, il en faut ${price}.`)
+            showToast(`Solde insuffisant ! Tu as ${balance} crédits, il en faut ${price}.`, false)
             return
         }
         this.disabled = true
+        const origText = this.textContent
         this.textContent = "..."
         try {
             const res = await fetch("/api/shop/buy", {
@@ -70,18 +126,23 @@ document.querySelectorAll(".btn-shop-buy").forEach(btn => {
             })
             const data = await res.json()
             if (data.success) {
-                if (data.balance !== undefined) {
-                    document.getElementById("shopBalance").textContent = data.balance
-                }
-                location.reload()
+                if (data.balance !== undefined) document.getElementById("shopBalance").textContent = data.balance
+                if (type === 'theme') showToast(`✓ ${name} activé !`)
+                else if (type === 'xpboost') showToast(`⚡ ${name} activé — ton XP est doublé !`)
+                else if (type === 'title') showToast(`🏅 Titre "${name.replace('Titre ','')}" appliqué sur ton profil !`)
+                else if (type === 'frame') showToast(`🖼️ ${name} appliqué sur ton profil !`)
+                else if (type === 'badge') showToast(`🎖️ Badge obtenu et visible sur ton profil !`)
+                else if (type === 'credits') showToast(`💰 +${data.creditsGained} crédits ajoutés à ton solde !`)
+                setTimeout(() => location.reload(), 1500)
             } else {
-                alert(data.error || "Erreur lors de l'achat.")
+                showToast(data.error || "Erreur lors de l'achat.", false)
                 this.disabled = false
-                this.textContent = price === 0 ? "Activer" : "Acheter"
+                this.textContent = origText
             }
         } catch(e) {
-            alert("Erreur réseau.")
+            showToast("Erreur réseau.", false)
             this.disabled = false
+            this.textContent = origText
         }
     })
 })

@@ -9,12 +9,40 @@ const Message = require("../models/Message")
 const XP_THRESHOLDS = { bronze: 100, argent: 500, or: 2000, platine: 10000 }
 
 const SHOP_ITEMS = [
-    { id: "dark",    name: "Thème Nuit",    price: 200, theme: "dark",    emoji: "🌙" },
-    { id: "neon",    name: "Thème Néon",    price: 350, theme: "neon",    emoji: "⚡" },
-    { id: "ocean",   name: "Thème Océan",   price: 300, theme: "ocean",   emoji: "🌊" },
-    { id: "sunset",  name: "Thème Coucher", price: 300, theme: "sunset",  emoji: "🌅" },
-    { id: "forest",  name: "Thème Forêt",   price: 300, theme: "forest",  emoji: "🌿" },
-    { id: "default", name: "Thème Défaut",  price: 0,   theme: "default", emoji: "🎨" },
+    // === THÈMES VISUELS ===
+    { id: "default",   name: "Thème Défaut",    price: 0,    type: "theme",   theme: "default",   emoji: "🎨", desc: "L'interface classique de SocialApp",            category: "Thèmes" },
+    { id: "dark",      name: "Thème Nuit",       price: 200,  type: "theme",   theme: "dark",      emoji: "🌙", desc: "Interface sombre, parfaite pour la nuit",       category: "Thèmes" },
+    { id: "ocean",     name: "Thème Océan",      price: 300,  type: "theme",   theme: "ocean",     emoji: "🌊", desc: "Ambiance marine fraîche et apaisante",           category: "Thèmes" },
+    { id: "sunset",    name: "Thème Coucher",    price: 300,  type: "theme",   theme: "sunset",    emoji: "🌅", desc: "Tons chauds inspirés du coucher de soleil",      category: "Thèmes" },
+    { id: "forest",    name: "Thème Forêt",      price: 300,  type: "theme",   theme: "forest",    emoji: "🌿", desc: "Palette naturelle et reposante",                 category: "Thèmes" },
+    { id: "neon",      name: "Thème Néon",       price: 350,  type: "theme",   theme: "neon",      emoji: "⚡", desc: "Effets néon fluo ultra-lumineux",                category: "Thèmes" },
+    { id: "rose",      name: "Thème Rose",       price: 350,  type: "theme",   theme: "rose",      emoji: "🌸", desc: "Palette douce et délicate façon cherry blossom", category: "Thèmes" },
+    { id: "minuit",    name: "Thème Minuit",     price: 400,  type: "theme",   theme: "minuit",    emoji: "🌌", desc: "Noir profond avec accents bleutés",              category: "Thèmes" },
+    { id: "cyberpunk", name: "Thème Cyberpunk",  price: 400,  type: "theme",   theme: "cyberpunk", emoji: "🤖", desc: "Interface futuriste style cyberpunk",            category: "Thèmes" },
+    { id: "galaxie",   name: "Thème Galaxie",    price: 500,  type: "theme",   theme: "galaxie",   emoji: "🔮", desc: "Univers spatial mystérieux et profond",          category: "Thèmes" },
+
+    // === BOOSTS XP ===
+    { id: "xpboost_1d", name: "Boost XP 24h",   price: 300,  type: "xpboost", duration: 1,  emoji: "⚡", desc: "Double tes gains d'XP pendant 24 heures",      category: "Boosts" },
+    { id: "xpboost_3d", name: "Boost XP 3 jours",price: 700,  type: "xpboost", duration: 3,  emoji: "🚀", desc: "Double tes gains d'XP pendant 3 jours",        category: "Boosts" },
+    { id: "xpboost_7d", name: "Boost XP 7 jours",price: 1500, type: "xpboost", duration: 7,  emoji: "💥", desc: "Double tes gains d'XP pendant 7 jours entiers", category: "Boosts" },
+    { id: "credits_50", name: "Pack 50 crédits",  price: 0,    type: "credits", amount: 50,   emoji: "💰", desc: "Offert ! Obtiens 50 crédits gratuits (1x/semaine)", category: "Boosts" },
+    { id: "credits_pack", name: "Pack Richesse",   price: 2000, type: "credits", amount: 3000, emoji: "💎", desc: "Investis 2000 crédits pour en récupérer 3000 !", category: "Boosts" },
+
+    // === TITRES DE PROFIL ===
+    { id: "title_pro",     name: "Titre Pro",      price: 300,  type: "title",  value: "Pro",      emoji: "💼", desc: "Affiche 'Pro' sous ton nom de profil",          category: "Titres" },
+    { id: "title_expert",  name: "Titre Expert",   price: 500,  type: "title",  value: "Expert",   emoji: "🎓", desc: "Affiche 'Expert' — statut reconnu",             category: "Titres" },
+    { id: "title_vip",     name: "Titre VIP",      price: 700,  type: "title",  value: "VIP",      emoji: "⭐", desc: "Affiche 'VIP' en or sur ton profil",            category: "Titres" },
+    { id: "title_elite",   name: "Titre Élite",    price: 1000, type: "title",  value: "Élite",    emoji: "🏅", desc: "Affiche 'Élite' — pour les meilleurs membres",  category: "Titres" },
+    { id: "title_legende", name: "Titre Légende",  price: 2500, type: "title",  value: "Légende",  emoji: "🏆", desc: "Le titre ultime — réservé aux vrais legends",   category: "Titres" },
+
+    // === CADRES D'AVATAR ===
+    { id: "frame_bronze",  name: "Cadre Bronze",   price: 150,  type: "frame",  value: "bronze",  emoji: "🥉", desc: "Cadre bronze autour de ta photo de profil",     category: "Cadres" },
+    { id: "frame_argent",  name: "Cadre Argent",   price: 400,  type: "frame",  value: "argent",  emoji: "🥈", desc: "Cadre argenté brillant",                        category: "Cadres" },
+    { id: "frame_or",      name: "Cadre Or",       price: 800,  type: "frame",  value: "or",      emoji: "🥇", desc: "Cadre doré exclusif pour les membres sérieux",  category: "Cadres" },
+    { id: "frame_diamant", name: "Cadre Diamant",  price: 2000, type: "frame",  value: "diamant", emoji: "💎", desc: "Cadre diamant ultra-rare — statut légendaire",  category: "Cadres" },
+
+    // === BADGES SPÉCIAUX ===
+    { id: "badge_premium", name: "Badge Premium",  price: 750,  type: "badge",  value: "premium", emoji: "👑", desc: "Débloque le badge Premium sur ton profil",       category: "Badges" },
 ]
 
 const BOUNTY_ACTION_TYPES = [
@@ -104,22 +132,70 @@ router.get("/shop", requireAuth, async (req, res) => {
     } catch (err) { console.error(err); res.redirect("/") }
 })
 
-// Acheter un thème
+// Acheter un article
 router.post("/api/shop/buy", requireAuth, async (req, res) => {
     try {
         const { itemId } = req.body
         const user = await User.findById(req.session.user.id)
         const item = SHOP_ITEMS.find(i => i.id === itemId)
         if (!item) return res.status(404).json({ error: "Article introuvable." })
-        if (user.theme === item.theme) return res.json({ success: true, message: "Thème déjà actif !" })
+
+        // Vérifier solde
         if (item.price > 0 && user.role !== "admin" && user.walletBalance < item.price) {
             return res.status(402).json({ error: `Solde insuffisant (${user.walletBalance} crédits, besoin de ${item.price}).` })
         }
+
+        // Pack crédits gratuit : limite 1x/semaine
+        if (item.id === "credits_50") {
+            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000)
+            if (user.lastFreeCredits && user.lastFreeCredits > oneWeekAgo) {
+                return res.status(400).json({ error: "Tu as déjà réclamé ce bonus cette semaine. Reviens dans 7 jours !" })
+            }
+        }
+
+        // Déduire le prix
         if (item.price > 0 && user.role !== "admin") user.walletBalance -= item.price
-        user.theme = item.theme
+
+        let result = {}
+
+        if (item.type === "theme") {
+            if (user.theme === item.theme) return res.json({ success: true, message: "Thème déjà actif !" })
+            user.theme = item.theme
+            req.session.user.theme = item.theme
+            result = { theme: item.theme }
+
+        } else if (item.type === "xpboost") {
+            const now = new Date()
+            const current = user.xpBoostExpiry && user.xpBoostExpiry > now ? user.xpBoostExpiry : now
+            user.xpBoostExpiry = new Date(current.getTime() + item.duration * 24 * 3600 * 1000)
+            result = { xpBoostExpiry: user.xpBoostExpiry }
+
+        } else if (item.type === "title") {
+            user.profileTitle = item.value
+            result = { profileTitle: item.value }
+
+        } else if (item.type === "frame") {
+            user.profileFrame = item.value
+            result = { profileFrame: item.value }
+
+        } else if (item.type === "badge") {
+            const already = user.badges.some(b => b.type === item.value)
+            if (already) {
+                // Rembourser
+                user.walletBalance += item.price
+                return res.json({ success: false, error: "Tu possèdes déjà ce badge !" })
+            }
+            user.badges.push({ type: item.value })
+            result = { badge: item.value }
+
+        } else if (item.type === "credits") {
+            user.walletBalance += item.amount
+            if (item.id === "credits_50") user.lastFreeCredits = new Date()
+            result = { creditsGained: item.amount }
+        }
+
         await user.save()
-        req.session.user.theme = item.theme
-        res.json({ success: true, theme: item.theme, balance: user.walletBalance })
+        res.json({ success: true, balance: user.walletBalance, ...result })
     } catch (err) { console.error(err); res.status(500).json({ error: "Erreur serveur." }) }
 })
 
@@ -269,11 +345,23 @@ router.post("/api/clone/toggle", requireAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Erreur serveur." }) }
 })
 
+// Sauvegarder les instructions du clone IA
+router.post("/api/clone/instructions", requireAuth, async (req, res) => {
+    try {
+        const { instructions } = req.body
+        const user = await User.findById(req.session.user.id)
+        user.aiCloneInstructions = (instructions || "").slice(0, 500)
+        await user.save()
+        res.json({ success: true })
+    } catch (err) { res.status(500).json({ error: "Erreur serveur." }) }
+})
+
 // API solde et XP
 router.get("/api/wallet/me", requireAuth, async (req, res) => {
     try {
-        const user = await User.findById(req.session.user.id, "walletBalance xp theme role aiCloneActive")
-        res.json({ balance: user.walletBalance, xp: user.xp, theme: user.theme, role: user.role, aiCloneActive: user.aiCloneActive })
+        const user = await User.findById(req.session.user.id, "walletBalance xp theme role aiCloneActive xpBoostExpiry profileTitle profileFrame")
+        const boostActive = user.xpBoostExpiry && user.xpBoostExpiry > new Date()
+        res.json({ balance: user.walletBalance, xp: user.xp, theme: user.theme, role: user.role, aiCloneActive: user.aiCloneActive, boostActive, xpBoostExpiry: user.xpBoostExpiry, profileTitle: user.profileTitle, profileFrame: user.profileFrame })
     } catch (err) { res.status(500).json({ error: "Erreur serveur." }) }
 })
 
